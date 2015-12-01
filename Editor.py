@@ -37,7 +37,7 @@ class Trie(object):
                 return set()
             node = node.children[char]
         return list(node.all_suffixes(prefix))
-
+# Alpha stage now, only supports C/C++
 keywords = {}
 keywords['default'] = ['main','#include','return','namespace','return','cin','cout','scanf','printf']
 keywords['loops'] = ['for','while','do','if','else','switch']
