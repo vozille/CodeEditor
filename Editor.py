@@ -13,6 +13,7 @@ from functools import reduce
 import os
 import subprocess
 
+
 class Trie(object):
 
     def __init__(self):
@@ -83,22 +84,24 @@ keywords['P_datatypes'] = [
     'NULL']
 app = Tkinter.Tk()
 app2 = Tk()
+app2.withdraw()
 
-app3 = Tk()
-compilepad = Text(app3,height = 5,width = 40)
-compilepad.pack(side = TOP,fill = BOTH)
-app3.withdraw()
+FLAG = 1
 
 class FileDetails(object):
+
     def __init__(self):
         self.path = ''
         self.name = ''
         self.execute = ''
-    def Filename(self,data):
+
+    def Filename(self, data):
         self.name = data
-    def FilePath(self,data):
+
+    def FilePath(self, data):
         self.path = data
-    def Execpath(self,data):
+
+    def Execpath(self, data):
         self.execute = data
 File = FileDetails()
 
@@ -135,6 +138,8 @@ class display_func(object):
             MyDict.insert(self.remove_punc(r[-1]))
 
     def show_in_console(self, event):
+        global FLAG
+        FLAG = 1
         self.syntax_highlight()
         self.linenumber()
         r = pad.get('1.0', INSERT)
@@ -154,40 +159,40 @@ class display_func(object):
             except ValueError:
                 pass
 
-    def syntax_highlight(self,pos = INSERT,flag = 0):
+    def syntax_highlight(self, pos=INSERT, flag=0):
         pad.tag_configure('default', foreground='#e0115f')
         pad.tag_configure('loops', foreground='green')
         pad.tag_configure('P_datatypes', foreground='aqua')
-        pad.tag_configure('normal',foreground = '#f8f8f2')
+        pad.tag_configure('normal', foreground='#f8f8f2')
         pad.tag_configure('quotes', foreground='gold')
-        coordinates1 = map(int,pad.index(pos).split('.'))
+        coordinates1 = map(int, pad.index(pos).split('.'))
         coordinates = str(coordinates1[0]) + '.0'
         if flag:
             coordinates = '1.0'
             pos = 'end'
         else:
             pos = pos + ' lineend'
-        r = pad.get(coordinates,pos)
-        brackets = ['(',')','[',']','{','}','<','>',',']
+        r = pad.get(coordinates, pos)
+        brackets = ['(', ')', '[', ']', '{', '}', '<', '>', ',']
         for i in brackets:
-            r = r.replace(i,' ')
+            r = r.replace(i, ' ')
         s = r
-        r = map(str,s.split())
-        t = map(str,s.split('\n'))
+        r = map(str, s.split())
+        t = map(str, s.split('\n'))
         for i in r:
             ncoordinates = str(coordinates1[0]) + '.' + str(s.index(i))
             if i in keywords['default']:
-                self.highlight_pattern(i,'default',ncoordinates,pos)
+                self.highlight_pattern(i, 'default', ncoordinates, pos)
             elif i in keywords['loops']:
-                self.highlight_pattern(i,'loops',ncoordinates,pos)
+                self.highlight_pattern(i, 'loops', ncoordinates, pos)
             elif i in keywords['P_datatypes']:
-                self.highlight_pattern(i,'P_datatypes',ncoordinates,pos)
+                self.highlight_pattern(i, 'P_datatypes', ncoordinates, pos)
 
         pattern = '"([A-Za-z0-9_\./\\-]*)"'
-        self.highlight_pattern(pattern,'quotes','1.0','end',True)
+        self.highlight_pattern(pattern, 'quotes', '1.0', 'end', True)
 
         pattern = "'([A-Za-z0-9_\./\\-]*)'"
-        self.highlight_pattern(pattern,'quotes','1.0','end',True)
+        self.highlight_pattern(pattern, 'quotes', '1.0', 'end', True)
 
     def open_highlight(self):
 
@@ -197,12 +202,12 @@ class display_func(object):
         pad.tag_configure('quotes', foreground='gold')
         for i in keywords:
             for j in keywords[i]:
-                self.highlight_pattern(j,i)
+                self.highlight_pattern(j, i)
 
         pattern = '"([A-Za-z0-9_\./\\-]*)"'
-        self.highlight_pattern(pattern,'quotes','1.0','end',True)
+        self.highlight_pattern(pattern, 'quotes', '1.0', 'end', True)
         pattern = "'([A-Za-z0-9_\./\\-]*)'"
-        self.highlight_pattern(pattern,'quotes','1.0','end',True)
+        self.highlight_pattern(pattern, 'quotes', '1.0', 'end', True)
 
     """
     unused now
@@ -224,6 +229,7 @@ class display_func(object):
         self.highlight_pattern(pattern,'quotes','1.0','end',True)
 
     """
+
     def indentation(self, event):
 
         curr = pad.get('1.0', INSERT)
@@ -237,7 +243,13 @@ class display_func(object):
             pad.mark_set(INSERT, '%d.%d' % (cordinate[0], cordinate[1]))
         self.linenumber()
 
-    def highlight_pattern(self, pattern, tag, start="1.0",end="end", regexp=False):
+    def highlight_pattern(
+            self,
+            pattern,
+            tag,
+            start="1.0",
+            end="end",
+            regexp=False):
         start = pad.index(start)
         end = pad.index(end)
         pad.mark_set("matchStart", start)
@@ -246,7 +258,12 @@ class display_func(object):
 
         count = IntVar()
         while True:
-            index = pad.search(pattern, "matchEnd", "searchLimit",count=count, regexp=regexp)
+            index = pad.search(
+                pattern,
+                "matchEnd",
+                "searchLimit",
+                count=count,
+                regexp=regexp)
             if index == "":
                 break
             pad.mark_set("matchStart", index)
@@ -254,12 +271,12 @@ class display_func(object):
             pad.tag_add(tag, "matchStart", "matchEnd")
 
     def linenumber(self):
-        linepad.config(state = NORMAL)
-        coordinate_pad = map(int,pad.index(END).split('.'))
-        linepad.delete('1.0',END)
-        for i in range(coordinate_pad[0]-1):
-            linepad.insert(END,str(i+1)+'.\n')
-        linepad.config(state = DISABLED)
+        linepad.config(state=NORMAL)
+        coordinate_pad = map(int, pad.index(END).split('.'))
+        linepad.delete('1.0', END)
+        for i in range(coordinate_pad[0] - 1):
+            linepad.insert(END, str(i + 1) + '.\n')
+        linepad.config(state=DISABLED)
 
 Display = display_func()
 
@@ -275,72 +292,145 @@ class cmd_filemenu(object):
     def Open(self):
         from tkFileDialog import askopenfilename
         open_file = askopenfilename(parent=app)
+        if len(open_file) == 0:
+            return
         pad.delete('1.0', END)
         pad.insert(END, open(open_file).read())
         Display.open_highlight()
         Display.linenumber()
         x = open_file
-        x = x.replace('/','\\')
-        File.Filename(map(str,x.split('\\'))[-1])
+        x = x.replace('/', '\\')
+        File.Filename(map(str, x.split('\\'))[-1])
         File.FilePath(x)
-        File.Execpath(x.replace('cpp','exe'))
+        File.Execpath(x.replace('cpp', 'exe'))
         app.title(File.name)
 
     def Save(self):
         from tkFileDialog import asksaveasfilename
         save_file = asksaveasfilename(parent=app)
-        data = pad.get('1.0', END)
-        sys.stdout = open(save_file, 'w')
-        print data
-        sys.stdout = sys.__stdout__
+        data = pad.get('1.0', END)[:-1]
+        f = open(save_file, 'w')
+        f.write(data)
+        f.close()
         x = save_file
-        x = x.replace('/','\\')
-        File.Filename(map(str,x.split('\\'))[-1])
+        x = x.replace('/', '\\')
+        File.Filename(map(str, x.split('\\'))[-1])
         File.FilePath(x)
         app.title(File.name)
 
 cmd_file = cmd_filemenu()
 
+
 class runFilemenu(object):
+
     def __init__(self):
         pass
+
     def compile(self):
-        app3.deiconify()
-        p = subprocess.Popen(["C:\\Program Files (x86)\\MinGW\\bin\\g++.exe", "-Wall", "-o", File.path,File.name]\
-                     , stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        global FLAG
+        FLAG = 0
+        # remove the old exe and replace it with current one
+        try:
+            os.remove('a.exe')
+        except WindowsError:
+            pass
+        # Save file automatically before compiling
+        data = pad.get('1.0', END)[:-1]
+        f = open(File.path, 'w')
+        f.write(data)
+        f.close()
+
+        outputpad.config(state=NORMAL)
+        outputpad.delete('1.0', END)
+        p = subprocess.Popen(
+            [
+                "C:\\Program Files (x86)\\MinGW\\bin\\g++.exe",
+                '-std=c++14',
+                File.path],
+            stdin=subprocess.PIPE,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE)
         status = p.communicate()[1]
         if len(status) == 0:
-            compilepad.insert(END,'compiled successfully \n')
+            outputpad.insert(END, 'compiled successfully \n')
         else:
-            compilepad.insert(END,status + '\n')
+            outputpad.insert(END, status + '\n')
+            p.terminate()
+            return -1
+        p.terminate()
+        outputpad.config(state=DISABLED)
+
 
     def run(self):
-        compilepad.insert(END,subprocess.check_output([File.execute]))
+        if FLAG:
+            x = self.compile()
+            # compilation failed, terminate
+            if x == -1:
+                return
+        outputpad.config(state=NORMAL)
+        r = inputpad.get('1.0', END)
+        f = open('input.txt', 'w')
+        f.write(r)
+        f.close()
+        os.system('a.exe<input.txt >output.txt')
+        r = open('output.txt').read()
+        outputpad.delete('1.0', END)
+        outputpad.insert(END, r)
+        outputpad.config(state=DISABLED)
+
 
 run = runFilemenu()
 
 
 def hello():
-    c = map(int,pad.index(INSERT).split('.'))
+    c = map(int, pad.index(INSERT).split('.'))
     c[-1] -= 1
-    pad.delete(str(c[0])+'.'+str(c[-1]),END)
+    pad.delete(str(c[0]) + '.' + str(c[-1]), END)
+
 
 def shareBar(*args):
     pad.yview(*args)
     linepad.yview(*args)
+
+
 def shareMouseWheel(event):
-    pad.yview('scroll',event.delta,'units')
-    linepad.yview('scroll',event.delta,'units')
+    pad.yview('scroll', event.delta, 'units')
+    linepad.yview('scroll', -1 * (event.delta / 120), 'units')
     return 'break'
-bar = Scrollbar(app)
-pad = Text(app, height=20, width=80,yscrollcommand = bar.set)
-pad.config(fg='#f8f8f2', bg='#272822', insertbackground='white')
-
-linepad = Text(app, height=20, width=4,yscrollcommand = bar.set)
-linepad.config(fg='#f8f8f2', bg='#272822', insertbackground='white',state = DISABLED)
 
 
-bar.config(command = shareBar)
+frame1 = Frame(app)
+frame12 = Frame(app)
+frame2 = Frame(app)
+W1 = PanedWindow(frame1, height=30, width=70)
+bar_editor = Scrollbar(frame1)
+bar_input_h = Scrollbar(frame12, orient=HORIZONTAL)
+
+# 272822
+pad = Text(W1, height=30, width=60, yscrollcommand=bar_editor.set)
+pad.config(fg='#f8f8f2', bg='#002b36', insertbackground='white')
+
+linepad = Text(frame1, height=30, width=4, yscrollcommand=bar_editor.set)
+linepad.config(
+    fg='#f8f8f2',
+    bg='#002b36',
+    insertbackground='white',
+    state=DISABLED)
+
+inputpad = Text(W1, height=30, width=30, xscrollcommand=bar_input_h.set)
+inputpad.config(fg='white', bg='#002b36', insertbackground='white')
+W1.add(pad)
+W1.add(inputpad)
+
+bar_editor.config(command=shareBar)
+bar_input_h.config(command=inputpad.xview)
+# 2aa198
+outputpad = ScrolledText(frame2, height=5, width=80)
+outputpad.config(
+    fg='white',
+    bg='#002b36',
+    insertbackground='white',
+    state=DISABLED)
 
 menubar = Menu(app)
 filemenu = Menu(menubar, tearoff=0)
@@ -350,20 +440,27 @@ filemenu.add_command(label='Save', command=cmd_file.Save)
 filemenu.add_command(label='Exit', command=cmd_file.Exit)
 menubar.add_cascade(label='File', menu=filemenu)
 
-runmenu = Menu(menubar,tearoff = 0)
-runmenu.add_command(label = 'Compile',command = run.compile)
-runmenu.add_command(label = 'Run',command = run.run)
+runmenu = Menu(menubar, tearoff=0)
+runmenu.add_command(label='Compile', command=run.compile)
+runmenu.add_command(label='Run', command=run.run)
 menubar.add_cascade(label='Run', menu=runmenu)
 
 app.bind('<KeyPress>', Display.show_in_console)
 app.bind('<space>', Display.addToTrie)
 app.bind('<Return>', Display.indentation)
-linepad.pack(side = LEFT,fill=Y)
-pad.pack(side = LEFT,fill=BOTH, expand=YES)
-bar.pack(side = LEFT,fill = Y)
+
+frame1.pack(side=TOP, fill=BOTH, expand=YES)
+linepad.pack(side=LEFT, fill=Y)
+W1.pack(side=LEFT, fill=BOTH, expand=YES)
+# pad.pack(side = LEFT,fill=BOTH, expand=YES)
+bar_editor.pack(side=LEFT, fill=Y)
+# inputpad.pack(side = LEFT,fill=Y)
+frame12.pack(side=TOP, fill=BOTH)
+frame2.pack(side=TOP, fill=BOTH, expand=YES)
+bar_input_h.pack(side=RIGHT)
+outputpad.pack(side=TOP, fill=BOTH, expand=YES)
+
 app.config(menu=menubar)
 app.title('untitled.cpp')
 app.mainloop()
 app2.mainloop()
-app3.title('run status')
-app3.mainloop()
