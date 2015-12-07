@@ -112,6 +112,7 @@ class display_func(object):
         pass
 
     def remove_punc(self, r):
+
         c = ''
         from string import punctuation
         for d in r:
@@ -120,6 +121,7 @@ class display_func(object):
         return c
 
     def defaultWords(self):
+        pad.edit_separator()
         import sys
         sys.stdin = open('input.txt', 'r')
         while True:
@@ -132,12 +134,14 @@ class display_func(object):
         self.defaultWords()
 
     def addToTrie(self, event):
+        pad.edit_separator()
         r = pad.get('1.0', END)
         r = map(str, r.split())
         if not MyDict.contains(r[-1]):
             MyDict.insert(self.remove_punc(r[-1]))
 
     def show_in_console(self, event):
+        pad.edit_separator()
         global FLAG
         FLAG = 1
         self.syntax_highlight()
@@ -160,6 +164,7 @@ class display_func(object):
                 pass
 
     def syntax_highlight(self, pos=INSERT, flag=0):
+        pad.edit_separator()
         pad.tag_configure('default', foreground='#e0115f')
         pad.tag_configure('loops', foreground='green')
         pad.tag_configure('P_datatypes', foreground='aqua')
@@ -187,6 +192,7 @@ class display_func(object):
                 self.highlight_pattern(i, 'loops', ncoordinates, pos)
             elif i in keywords['P_datatypes']:
                 self.highlight_pattern(i, 'P_datatypes', ncoordinates, pos)
+
 
         pattern = '"([A-Za-z0-9_\./\\-]*)"'
         self.highlight_pattern(pattern, 'quotes', '1.0', 'end', True)
@@ -231,7 +237,7 @@ class display_func(object):
     """
 
     def indentation(self, event):
-
+        pad.edit_separator()
         curr = pad.get('1.0', INSERT)
         till_end = pad.get('1.0', END)
         indent = max(curr.count("{") - curr.count('}'), 0)
@@ -320,6 +326,26 @@ class cmd_filemenu(object):
 
 cmd_file = cmd_filemenu()
 
+class editFileMenu(object):
+
+    def undo(self,*argv):
+        try:
+            pad.edit_undo()
+            Display.linenumber()
+            Display.open_highlight()
+        except TclError:
+            pass
+    def redo(self,*argv):
+        try:
+            pad.edit_redo()
+            Display.linenumber()
+            Display.open_highlight()
+        except TclError:
+            pass
+    def select_all(self):
+        pass
+
+edit = editFileMenu()
 
 class runFilemenu(object):
 
@@ -407,10 +433,10 @@ bar_editor = Scrollbar(frame1)
 bar_input_h = Scrollbar(frame12, orient=HORIZONTAL)
 
 # 272822
-pad = Text(W1, height=30, width=60, yscrollcommand=bar_editor.set)
+pad = Text(W1, height=30, width=60, yscrollcommand=bar_editor.set, undo = True)
 pad.config(fg='#f8f8f2', bg='#002b36', insertbackground='white')
 
-linepad = Text(frame1, height=30, width=4, yscrollcommand=bar_editor.set)
+linepad = Text(frame1, height=30, width=4, yscrollcommand=bar_editor.set, undo = True)
 linepad.config(
     fg='#f8f8f2',
     bg='#002b36',
@@ -440,6 +466,11 @@ filemenu.add_command(label='Save', command=cmd_file.Save)
 filemenu.add_command(label='Exit', command=cmd_file.Exit)
 menubar.add_cascade(label='File', menu=filemenu)
 
+editmenu = Menu(menubar, tearoff = 0)
+editmenu.add_command(label = 'Undo', command = edit.undo)
+editmenu.add_command(label = 'Redo', command = edit.redo)
+menubar.add_cascade(label = 'Edit', menu = editmenu)
+
 runmenu = Menu(menubar, tearoff=0)
 runmenu.add_command(label='Compile', command=run.compile)
 runmenu.add_command(label='Run', command=run.run)
@@ -448,6 +479,8 @@ menubar.add_cascade(label='Run', menu=runmenu)
 app.bind('<KeyPress>', Display.show_in_console)
 app.bind('<space>', Display.addToTrie)
 app.bind('<Return>', Display.indentation)
+app.bind('<Control-r>',edit.redo)
+app.bind('<Control-z>',edit.undo)
 
 frame1.pack(side=TOP, fill=BOTH, expand=YES)
 linepad.pack(side=LEFT, fill=Y)
