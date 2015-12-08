@@ -82,6 +82,17 @@ keywords['P_datatypes'] = [
     'struct',
     'auto',
     'NULL']
+keywords['A_datatypes'] = [
+    'vector',
+    'list',
+    'stack',
+    'queue',
+    'map',
+    'set',
+    'multiset',
+    'multimap',
+    'pair']
+
 app = Tkinter.Tk()
 app2 = Tk()
 app2.withdraw()
@@ -170,6 +181,7 @@ class display_func(object):
         pad.tag_configure('P_datatypes', foreground='aqua')
         pad.tag_configure('normal', foreground='#f8f8f2')
         pad.tag_configure('quotes', foreground='gold')
+        pad.tag_configure('A_datatypes', foreground = '#228b22')
         coordinates1 = map(int, pad.index(pos).split('.'))
         coordinates = str(coordinates1[0]) + '.0'
         if flag:
@@ -192,7 +204,8 @@ class display_func(object):
                 self.highlight_pattern(i, 'loops', ncoordinates, pos)
             elif i in keywords['P_datatypes']:
                 self.highlight_pattern(i, 'P_datatypes', ncoordinates, pos)
-
+            elif i in keywords['A_datatypes']:
+                self.highlight_pattern(i, 'A_datatypes', ncoordinates, pos)
 
         pattern = '"([A-Za-z0-9_\./\\-]*)"'
         self.highlight_pattern(pattern, 'quotes', '1.0', 'end', True)
@@ -206,6 +219,7 @@ class display_func(object):
         pad.tag_configure('loops', foreground='green')
         pad.tag_configure('P_datatypes', foreground='aqua')
         pad.tag_configure('quotes', foreground='gold')
+        pad.tag_configure('A_datatypes', foreground = '#228b22')
         for i in keywords:
             for j in keywords[i]:
                 self.highlight_pattern(j, i)
@@ -312,6 +326,17 @@ class cmd_filemenu(object):
         app.title(File.name)
 
     def Save(self):
+        data = pad.get('1.0', END)[:-1]
+        try:
+            f = open(File.path, 'w')
+            f.write(data)
+            f.close()
+        except IOError:
+            f = open('untitled.cpp', 'w')
+            f.write(data)
+            f.close()
+            return -1
+    def Save_As(self):
         from tkFileDialog import asksaveasfilename
         save_file = asksaveasfilename(parent=app)
         data = pad.get('1.0', END)[:-1]
@@ -352,7 +377,12 @@ class runFilemenu(object):
     def __init__(self):
         pass
 
-    def compile(self):
+    def is_compiling(self):
+        outputpad.config(state=NORMAL)
+        outputpad.delete('1.0', END)
+        outputpad.insert(END, 'compiling.....')
+
+    def compile(self, *args):
         global FLAG
         FLAG = 0
         # remove the old exe and replace it with current one
@@ -360,23 +390,30 @@ class runFilemenu(object):
             os.remove('a.exe')
         except WindowsError:
             pass
-        # Save file automatically before compiling
-        data = pad.get('1.0', END)[:-1]
-        f = open(File.path, 'w')
-        f.write(data)
-        f.close()
+        # Save_As file automatically before compiling
+        x = cmd_file.Save()
+        self.is_compiling()
 
-        outputpad.config(state=NORMAL)
-        outputpad.delete('1.0', END)
-        p = subprocess.Popen(
-            [
-                "C:\\Program Files (x86)\\MinGW\\bin\\g++.exe",
-                '-std=c++14',
-                File.path],
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE)
+        if x == -1:
+            p = subprocess.Popen(
+                [
+                    "C:\\Program Files (x86)\\MinGW\\bin\\g++.exe",
+                    '-std=c++14',
+                    'untitled.cpp'],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE)
+        else:
+            p = subprocess.Popen(
+                [
+                    "C:\\Program Files (x86)\\MinGW\\bin\\g++.exe",
+                    '-std=c++14',
+                    File.path],
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE)
         status = p.communicate()[1]
+        outputpad.delete('1.0',END)
         if len(status) == 0:
             outputpad.insert(END, 'compiled successfully \n')
         else:
@@ -387,13 +424,15 @@ class runFilemenu(object):
         outputpad.config(state=DISABLED)
 
 
-    def run(self):
+    def run(self, *args):
         if FLAG:
             x = self.compile()
             # compilation failed, terminate
             if x == -1:
                 return
         outputpad.config(state=NORMAL)
+        outputpad.delete('1.0',END)
+        outputpad.insert(END,'Running ...')
         r = inputpad.get('1.0', END)
         f = open('input.txt', 'w')
         f.write(r)
@@ -462,23 +501,26 @@ menubar = Menu(app)
 filemenu = Menu(menubar, tearoff=0)
 filemenu.add_command(label='New', command=hello)
 filemenu.add_command(label='Open', command=cmd_file.Open)
-filemenu.add_command(label='Save', command=cmd_file.Save)
+filemenu.add_command(label= 'Save', command = cmd_file.Save)
+filemenu.add_command(label='Save As', command=cmd_file.Save_As)
 filemenu.add_command(label='Exit', command=cmd_file.Exit)
 menubar.add_cascade(label='File', menu=filemenu)
 
 editmenu = Menu(menubar, tearoff = 0)
-editmenu.add_command(label = 'Undo', command = edit.undo)
-editmenu.add_command(label = 'Redo', command = edit.redo)
+editmenu.add_command(label = 'Undo - (ctrl+z)', command = edit.undo)
+editmenu.add_command(label = 'Redo - (ctrl+r)', command = edit.redo)
 menubar.add_cascade(label = 'Edit', menu = editmenu)
 
 runmenu = Menu(menubar, tearoff=0)
-runmenu.add_command(label='Compile', command=run.compile)
-runmenu.add_command(label='Run', command=run.run)
+runmenu.add_command(label='Compile - (F7)', command=run.compile)
+runmenu.add_command(label='Run - (F5)', command=run.run)
 menubar.add_cascade(label='Run', menu=runmenu)
 
 app.bind('<KeyPress>', Display.show_in_console)
 app.bind('<space>', Display.addToTrie)
 app.bind('<Return>', Display.indentation)
+app.bind('<F7>', run.compile)
+app.bind('<F5>',run.run)
 app.bind('<Control-r>',edit.redo)
 app.bind('<Control-z>',edit.undo)
 
