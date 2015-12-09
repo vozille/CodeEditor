@@ -1,0 +1,4 @@
+default main #include typedef using const return cin cout scanf printf
+loops for while do if else switch
+A_datatypes vector list stack queue map set multiset multimap pair
+P_datatypes int float double long string char bool void struct auto NULL
