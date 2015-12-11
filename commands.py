@@ -4,7 +4,6 @@ The command list which brings life to the GUI :P
 #!usr/bin/Python2
 
 import Tkinter as GUI
-from ScrolledText import *
 from functools import reduce
 import os
 import subprocess
@@ -54,20 +53,24 @@ class Trie(object):
             node = node.children[char]
         return list(node.all_suffixes(prefix))
 MyDict = Trie()
-
 keywords = {}
-
-
 def setKeys():
+    keywords['c++'] = {}
     with open('cppkeywords.txt', 'r') as f:
         for i in f:
             i = i.strip('\n')
             words = map(str, i.split())
             key = words[0]
             words.pop(0)
-            keywords[key] = list(words)
-        f.close()
-
+            keywords['c++'][key] = list(words)
+    keywords['py'] = {}
+    with open('pykeywords.txt', 'r') as f:
+        for i in f:
+            i = i.strip('\n')
+            words = map(str, i.split())
+            key = words[0]
+            words.pop(0)
+            keywords['py'][key] = list(words)
 FLAG = 1
 
 
@@ -89,13 +92,13 @@ class FileDetails(object):
 File = FileDetails()
 
 
-class display_func(object):
+class codeDisplay(object):
 
-    def __init__(self):
-        pass
+    def tab_width(self,pad,*args):
+        pad.insert(GUI.INSERT,' '*4)
+        return 'break'
 
     def remove_punc(self, r):
-
         c = ''
         from string import punctuation
         for d in r:
@@ -103,7 +106,7 @@ class display_func(object):
                 c += d
         return c
 
-    def defaultWords(self, pad):
+    def default_words(self, pad):
         pad.edit_separator()
         import sys
         sys.stdin = open('input.txt', 'r')
@@ -114,20 +117,20 @@ class display_func(object):
                     MyDict.insert(self.remove_punc(i))
             except EOFError:
                 return
-        self.defaultWords(pad)
+        self.default_words(pad)
 
-    def addToTrie(self, pad, *args):
+    def add_to_trie(self, pad, *args):
         pad.edit_separator()
         r = pad.get('1.0', GUI.END)
         r = map(str, r.split())
         if not MyDict.contains(r[-1]):
             MyDict.insert(self.remove_punc(r[-1]))
 
-    def show_in_console(self, event, app2, pad, linepad):
+    def show_in_console(self, event, app2, pad, linepad, lang):
         pad.edit_separator()
         global FLAG
         FLAG = 1
-        self.syntax_highlight(pad)
+        self.syntax_highlight(pad,GUI.INSERT,0,lang)
         self.linenumber(pad, linepad)
         r = pad.get('1.0', GUI.INSERT)
         r = map(str, r.split())
@@ -146,14 +149,18 @@ class display_func(object):
             except ValueError:
                 pass
 
-    def syntax_highlight(self, pad, pos=GUI.INSERT, flag=0):
+    """
+    fix
+    """
+
+    def syntax_highlight(self, pad, pos=GUI.INSERT, flag=0, lang = 'c++'):
         pad.edit_separator()
         pad.tag_configure('default', foreground='#e0115f')
         pad.tag_configure('loops', foreground='green')
         pad.tag_configure('P_datatypes', foreground='aqua')
         pad.tag_configure('normal', foreground='#f8f8f2')
         pad.tag_configure('quotes', foreground='gold')
-        pad.tag_configure('A_datatypes', foreground='#228b22')
+        pad.tag_configure('A_datatypes', foreground='orange')
         coordinates1 = map(int, pad.index(pos).split('.'))
         coordinates = str(coordinates1[0]) + '.0'
         if flag:
@@ -170,14 +177,14 @@ class display_func(object):
         t = map(str, s.split('\n'))
         for i in r:
             ncoordinates = str(coordinates1[0]) + '.' + str(s.index(i))
-            if i in keywords['default']:
+            if i in keywords[lang]['default']:
                 self.highlight_pattern(pad, i, 'default', ncoordinates, pos)
-            elif i in keywords['loops']:
+            elif i in keywords[lang]['loops']:
                 self.highlight_pattern(pad, i, 'loops', ncoordinates, pos)
-            elif i in keywords['P_datatypes']:
+            elif i in keywords[lang]['P_datatypes']:
                 self.highlight_pattern(
                     pad, i, 'P_datatypes', ncoordinates, pos)
-            elif i in keywords['A_datatypes']:
+            elif i in keywords[lang]['A_datatypes']:
                 self.highlight_pattern(
                     pad, i, 'A_datatypes', ncoordinates, pos)
 
@@ -187,15 +194,19 @@ class display_func(object):
         pattern = "'([A-Za-z0-9_\./\\-]*)'"
         self.highlight_pattern(pad, pattern, 'quotes', '1.0', 'end', True)
 
+
+    """
+    fix
+    """
     def open_highlight(self, pad, lang='c++'):
 
         pad.tag_configure('default', foreground='#e0115f')
         pad.tag_configure('loops', foreground='green')
         pad.tag_configure('P_datatypes', foreground='aqua')
         pad.tag_configure('quotes', foreground='gold')
-        pad.tag_configure('A_datatypes', foreground='#228b22')
-        for i in keywords:
-            for j in keywords[i]:
+        pad.tag_configure('A_datatypes', foreground='orange')
+        for i in keywords[lang]:
+            for j in keywords[lang][i]:
                 self.highlight_pattern(pad, j, i)
 
         pattern = '"([A-Za-z0-9_\./\\-]*)"'
@@ -203,18 +214,53 @@ class display_func(object):
         pattern = "'([A-Za-z0-9_\./\\-]*)'"
         self.highlight_pattern(pad, pattern, 'quotes', '1.0', 'end', True)
 
-    def indentation(self, pad, linepad, *args):
+    def indentation(self, pad, linepad,lang='c++',*args):
         pad.edit_separator()
-        curr = pad.get('1.0', GUI.INSERT)
-        till_end = pad.get('1.0', GUI.END)
-        indent = max(curr.count("{") - curr.count('}'), 0)
-        diff = till_end.count('{') - till_end.count('}')
-        pad.insert(GUI.INSERT, '    ' * indent)
-        cordinate = map(int, pad.index(GUI.INSERT).split('.'))
-        if diff > 0:
-            pad.insert(GUI.INSERT, '\n' + '    ' * max(indent - 1, 0) + '}')
-            pad.mark_set(GUI.INSERT, '%d.%d' % (cordinate[0], cordinate[1]))
+        if lang == 'c++':
+            curr = pad.get('1.0', GUI.INSERT)
+            till_end = pad.get('1.0', GUI.END)
+            indent = max(curr.count("{") - curr.count('}'), 0)
+            diff = till_end.count('{') - till_end.count('}')
+            pad.insert(GUI.INSERT, '    ' * indent)
+            cordinate = map(int, pad.index(GUI.INSERT).split('.'))
+            if diff > 0:
+                pad.insert(GUI.INSERT, '\n' + ' '* 4* max(indent - 1, 0) + '}')
+                pad.mark_set(GUI.INSERT, '%d.%d' % (cordinate[0], cordinate[1]))
+        if lang == 'py':
+            coordinates1 = map(int, pad.index(GUI.INSERT).split('.'))
+            if coordinates1[0] != 1:
+                coordinates = str(coordinates1[0]-1) + '.0'
+                r = pad.get(coordinates, str(coordinates1[0]-1) + '.1111')
+                letters = list(str(r))
+                cnt = 0
+                #find indentation level
+                for i in letters:
+                    if i == ' ':
+                        cnt += 1
+                    else:
+                        break
+                cnt = cnt/4
+                #check if indentation increasing keywords present
+                f = 0
+                for i in keywords['py']['loops']:
+                    if i in r:
+                        f = 1
+                        break
+
+                if f:
+                    pad.insert(GUI.INSERT,(' '*(cnt + 1)*4))
+                else:
+                    pad.insert(GUI.INSERT,(' '*(cnt)*4))
         self.linenumber(pad, linepad)
+
+    def fast_backspace(self,pad,linepad,*args):
+        coordinates1 = map(int, pad.index(GUI.INSERT).split('.'))
+        coordinates = str(coordinates1[0]) + '.0'
+        r = pad.get(coordinates, GUI.INSERT)
+        if len(set(list(r))) == 1 and r[0] == u' ':
+            coordinates = str(coordinates1[0]) + '.' + str(max(0,coordinates1[1]-3))
+            pad.delete(coordinates,GUI.INSERT)
+        self.linenumber(pad,linepad)
 
     def highlight_pattern(
             self,
@@ -252,13 +298,10 @@ class display_func(object):
             linepad.insert(GUI.END, str(i + 1) + '.\n')
         linepad.config(state=GUI.DISABLED)
 
-Display = display_func()
+Display = codeDisplay()
 
 
-class cmd_filemenu(object):
-
-    def __init__(self):
-        pass
+class fileFileMenu(object):
 
     def Exit(self):
         exit(0)
@@ -270,7 +313,7 @@ class cmd_filemenu(object):
             return
         pad.delete('1.0', GUI.END)
         pad.insert(GUI.END, open(open_file).read())
-        Display.open_highlight(pad)
+        Display.open_highlight(pad,lang)
         Display.linenumber(pad, linepad)
         x = open_file
         x = x.replace('/', '\\')
@@ -304,24 +347,24 @@ class cmd_filemenu(object):
         File.FilePath(x)
         app.title(File.name)
 
-cmd_file = cmd_filemenu()
+cmd_file = fileFileMenu()
 
 
 class editFileMenu(object):
 
-    def undo(self, pad, linepad, *argv):
+    def undo(self, pad, linepad,lang='c++', *argv):
         try:
             pad.edit_undo()
             Display.linenumber(pad, linepad)
-            Display.open_highlight(pad)
+            Display.open_highlight(pad,lang)
         except GUI.TclError:
             pass
 
-    def redo(self, pad, linepad, *argv):
+    def redo(self, pad, linepad,lang='c++', *argv):
         try:
             pad.edit_redo()
             Display.linenumber(pad, linepad)
-            Display.open_highlight(pad)
+            Display.open_highlight(pad,lang)
         except GUI.TclError:
             pass
 
@@ -333,66 +376,101 @@ edit = editFileMenu()
 
 class runFilemenu(object):
 
-    def __init__(self):
-        pass
-
     def compile(self, app, pad, outputpad, lang='c++', *args):
-        global FLAG
-        FLAG = 0
-        # remove the old exe and replace it with current one
-        try:
-            os.remove('a.exe')
-        except WindowsError:
-            pass
-        # Save_As file automatically before compiling
-        x = cmd_file.Save(app, pad)
 
-        if x == -1:
-            p = subprocess.Popen(
-                [
-                    "C:\\Program Files (x86)\\MinGW\\bin\\g++.exe",
-                    '-std=c++14',
-                    'untitled.cpp'],
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE)
-        else:
-            p = subprocess.Popen(
-                [
-                    "C:\\Program Files (x86)\\MinGW\\bin\\g++.exe",
-                    '-std=c++14',
-                    File.path],
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE)
-        status = p.communicate()[1]
-        outputpad.delete('1.0', GUI.END)
-        if len(status) == 0:
-            outputpad.insert(GUI.END, 'compiled successfully \n')
-        else:
-            outputpad.insert(GUI.END, status + '\n')
+        if lang == 'c++':
+            global FLAG
+            FLAG = 0
+
+            # remove the old exe and replace it with current one
+            try:
+                os.remove('a.exe')
+            except WindowsError:
+                pass
+            # Save_As file automatically before compiling
+            x = cmd_file.Save(app, pad)
+
+            if x == -1:
+                p = subprocess.Popen(
+                    [
+                        "C:\\Program Files (x86)\\MinGW\\bin\\g++.exe",
+                        '-std=c++14',
+                        'untitled.cpp'],
+                    stdin=subprocess.PIPE,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE)
+            else:
+                p = subprocess.Popen(
+                    [
+                        "C:\\Program Files (x86)\\MinGW\\bin\\g++.exe",
+                        '-std=c++14',
+                        File.path],
+                    stdin=subprocess.PIPE,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE)
+            status = p.communicate()[1]
+            outputpad.config(state = GUI.NORMAL)
+            outputpad.delete('1.0', GUI.END)
+            outputpad.insert(GUI.END, lang)
+            if len(status) == 0:
+                outputpad.insert(GUI.END, 'compiled successfully \n')
+            else:
+                outputpad.insert(GUI.END, status + '\n')
+                p.terminate()
+                return -1
             p.terminate()
-            return -1
-        p.terminate()
-        outputpad.config(state=GUI.DISABLED)
+            outputpad.config(state=GUI.DISABLED)
+        if lang == 'py':
+            outputpad.config(state = GUI.NORMAL)
+            outputpad.delete('1.0','end')
+            outputpad.insert(GUI.INSERT,'Python programs are interpreted. Press run instead')
 
     def run(self, app, pad, outputpad, inputpad, lang='c++', *args):
-        if FLAG:
-            x = self.compile(app, pad, outputpad)
-            # compilation failed, terminate
-            if x == -1:
+        if lang == 'c++':
+            outputpad.config(state=GUI.NORMAL)
+            outputpad.delete('1.0', GUI.END)
+            if FLAG:
+                x = self.compile(app, pad, outputpad)
+                # compilation failed, terminate
+                if x == -1:
+                    outputpad.insert(GUI.END, 'Compilation Failed.. Press Compile to get details')
+            if not os.path.exists('a.exe'):
+                outputpad.delete('1.0', GUI.END)
+                outputpad.insert(GUI.END, 'Compilation Failed.. Press Compile to get details')
                 return
-        outputpad.config(state=GUI.NORMAL)
-        outputpad.delete('1.0', GUI.END)
-        outputpad.insert(GUI.END, 'Running ...')
-        r = inputpad.get('1.0', GUI.END)
-        f = open('input.txt', 'w')
-        f.write(r)
-        f.close()
-        os.system('a.exe<input.txt >output.txt')
-        r = open('output.txt').read()
-        outputpad.delete('1.0', GUI.END)
-        outputpad.insert(GUI.END, r)
-        outputpad.config(state=GUI.DISABLED)
+            r = inputpad.get('1.0', GUI.END)
+            f = open('input.txt', 'w')
+            f.write(r)
+            f.close()
+            os.system('a.exe<input.txt >output.txt')
+            r = open('output.txt').read()
+            outputpad.delete('1.0', GUI.END)
+            outputpad.insert(GUI.END, r)
+            outputpad.config(state=GUI.DISABLED)
+
+        if lang == 'py':
+            cmd_file.Save(app,pad)
+            r = inputpad.get('1.0', GUI.END)
+            f = open('input.txt', 'w')
+            f.write(r)
+            f.close()
+            outputpad.config(state = GUI.NORMAL)
+            f = open('error.txt','w')
+            status = subprocess.call('python '+File.path+'<input.txt >output.txt',shell=True,
+                                     stderr=f)
+            outputpad.config(state = GUI.NORMAL)
+            outputpad.delete('1.0', GUI.END)
+            outputpad.insert(GUI.END, lang+'\n')
+            if status == 0:
+                r = open('output.txt').read()
+                outputpad.delete('1.0', GUI.END)
+                outputpad.insert(GUI.END, r)
+                outputpad.config(state=GUI.DISABLED)
+            else:
+                r = open('error.txt').read()
+                outputpad.delete('1.0', GUI.END)
+                outputpad.insert(GUI.END, r)
+                outputpad.config(state=GUI.DISABLED)
+            outputpad.config(state=GUI.DISABLED)
 
 run = runFilemenu()
