@@ -3,21 +3,28 @@
 A code editor, can also compile and run programs.
 Currently supports only C++ in Windows
 
+Now python2 support yay
+
 """
 #!usr/bin/Python2
 
 import Tkinter as GUI
-from ScrolledText import *
-from functools import partial
+import ScrolledText
 import commands as EC
 
 
 app = GUI.Tk()
 app2 = GUI.Tk()
 app2.withdraw()
-
+lang = ''
 
 def main():
+
+    def change_lang(newlang):
+        global lang
+        lang = newlang
+    change_lang('c++')
+
     def hello():
         c = map(int, pad.index(GUI.INSERT).split('.'))
         c[-1] -= 1
@@ -35,8 +42,8 @@ def main():
     MyDict = EC.Trie()
     File = EC.FileDetails()
     EC.setKeys()
-    Display = EC.display_func()
-    cmd_file = EC.cmd_filemenu()
+    Display = EC.codeDisplay()
+    cmd_file = EC.fileFileMenu()
     edit = EC.editFileMenu()
     run = EC.runFilemenu()
 
@@ -80,7 +87,7 @@ def main():
     bar_editor.config(command=shareBar)
     bar_input_h.config(command=inputpad.xview)
     # 2aa198
-    outputpad = ScrolledText(frame2, height=5, width=80)
+    outputpad = ScrolledText.ScrolledText(frame2, height=5, width=80)
     outputpad.config(
         fg='white',
         bg='#002b36',
@@ -95,7 +102,8 @@ def main():
         command=lambda: cmd_file.Open(
             app,
             pad,
-            linepad))
+            linepad,
+            lang))
     filemenu.add_command(label='Save', command=lambda: cmd_file.Save(app, pad))
     filemenu.add_command(
         label='Save As',
@@ -106,51 +114,34 @@ def main():
     menubar.add_cascade(label='File', menu=filemenu)
 
     editmenu = GUI.Menu(menubar, tearoff=0)
-    editmenu.add_command(label='Undo - (ctrl+z)', command=edit.undo)
-    editmenu.add_command(label='Redo - (ctrl+r)', command=edit.redo)
+    editmenu.add_command(label='Undo - (ctrl+z)', command= lambda : edit.undo(pad,linepad))
+    editmenu.add_command(label='Redo - (ctrl+r)', command= lambda : edit.redo(pad,linepad))
     menubar.add_cascade(label='Edit', menu=editmenu)
 
     runmenu = GUI.Menu(menubar, tearoff=0)
-    runmenu.add_command(
-        label='Compile - (F7)',
-        command=lambda: run.compile(
-            app,
-            pad,
-            outputpad))
-    runmenu.add_command(
-        label='Run - (F5)',
-        command=lambda: run.run(
-            app,
-            pad,
-            outputpad,
-            inputpad))
+    runmenu.add_command(label='Compile - (F7)',command=lambda: run.compile(
+            app,pad,outputpad,lang))
+    runmenu.add_command(label='Run - (F5)',command=lambda: run.run(
+            app,pad,outputpad,inputpad,lang))
     menubar.add_cascade(label='Run', menu=runmenu)
 
-    app.bind(
-        '<KeyPress>',
-        lambda event: Display.show_in_console(
-            event,
-            app2,
-            pad,
-            linepad))
-    app.bind('<space>', lambda event: Display.addToTrie(pad, event))
-    app.bind(
-        '<Return>',
-        lambda event: Display.indentation(
-            pad,
-            linepad,
-            event))
-    app.bind('<F7>', lambda event: run.compile(app, pad, outputpad, event))
-    app.bind(
-        '<F5>',
-        lambda event: run.run(
-            app,
-            pad,
-            outputpad,
-            inputpad,
-            event))
+    langmenu = GUI.Menu(menubar, tearoff=0)
+    langmenu.add_radiobutton(label='c++',command = lambda : change_lang('c++'))
+    langmenu.add_radiobutton(label='python',command= lambda : change_lang('py'))
+    menubar.add_cascade(label = 'Language',menu=langmenu)
+
+    pad.bind('<Tab>',lambda event: Display.tab_width(pad,event))
+    app.bind('<KeyPress>',lambda event: Display.show_in_console(
+            event,app2,pad,linepad,lang))
+    app.bind('<space>', lambda event: Display.add_to_trie(pad, event))
+    app.bind('<Return>',lambda event: Display.indentation(pad,linepad,lang,event))
+    app.bind('<F7>', lambda event: run.compile(app, pad, outputpad,lang, event))
+    app.bind('<F5>',lambda event: run.run(
+            app,pad,outputpad,inputpad,lang,event))
+
     app.bind('<Control-r>', lambda event: edit.redo(pad, linepad, event))
     app.bind('<Control-z>', lambda event: edit.undo(pad, linepad, event))
+    app.bind('<BackSpace>', lambda event: Display.fast_backspace(pad,linepad ,event))
 
     frame1.pack(side=GUI.TOP, fill=GUI.BOTH, expand=GUI.YES)
     linepad.pack(side=GUI.LEFT, fill=GUI.Y)
