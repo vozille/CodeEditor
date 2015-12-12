@@ -1,0 +1,4 @@
+default and as assert break import not or pass print with yield return
+loops for while do if else elif def class
+A_datatypes list set dict range xrange from try except map
+P_datatypes int chr str ord in lambda global input
