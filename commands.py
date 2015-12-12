@@ -1,16 +1,15 @@
+# !usr/bin/Python2
 """
 The command list which brings life to the GUI :P
 """
-#!usr/bin/Python2
 
 import Tkinter as GUI
-from functools import reduce
 import os
 import subprocess
+from functools import reduce
 
 
 class Trie(object):
-
     def __init__(self):
         self.children = {}
         self.flag = False  # Flag to represent that a word ends at this node
@@ -43,7 +42,7 @@ class Trie(object):
         return reduce(
             lambda a, b: a | b,
             [node.all_suffixes(prefix + char)
-             for(char, node) in self.children.items()]) | results
+             for (char, node) in self.children.items()]) | results
 
     def autocomplete(self, prefix):
         node = self
@@ -52,9 +51,18 @@ class Trie(object):
                 return set()
             node = node.children[char]
         return list(node.all_suffixes(prefix))
+
+
 MyDict = Trie()
+
 keywords = {}
+
+
 def setKeys():
+    """
+    sets default keywords for each language
+    :return:
+    """
     keywords['c++'] = {}
     with open('cppkeywords.txt', 'r') as f:
         for i in f:
@@ -63,6 +71,8 @@ def setKeys():
             key = words[0]
             words.pop(0)
             keywords['c++'][key] = list(words)
+            for j in words:
+                MyDict.insert(j)
     keywords['py'] = {}
     with open('pykeywords.txt', 'r') as f:
         for i in f:
@@ -71,34 +81,76 @@ def setKeys():
             key = words[0]
             words.pop(0)
             keywords['py'][key] = list(words)
+            for j in words:
+                MyDict.insert(j)
+
+
 FLAG = 1
 
 
 class FileDetails(object):
+    """
+    stores current file details
+    """
 
     def __init__(self):
         self.path = ''
         self.name = ''
         self.execute = ''
 
-    def Filename(self, data):
+    def filename(self, data):
         self.name = data
 
-    def FilePath(self, data):
+    def filepath(self, data):
         self.path = data
 
-    def Execpath(self, data):
+    def execpath(self, data):
         self.execute = data
+
+
 File = FileDetails()
+
+"""
+Variables used here :
+:param app: the main window
+:param app2: the window for autocomplete
+:param pad: the textbox in which code is written
+:param lb: the listbox storing autocomplete words
+:param lang: programming language
+:param linepad: textbox contain lines
+:param inputpad: textbox for storing input
+:param outputpad: textbox for storing output
+:param args: mostly to pass event bindings
+
+:return:
+"""
 
 
 class codeDisplay(object):
+    def escape(self, app2, *args):
+        """
+        closes the suggestions box
+        """
+        app2.withdraw()
 
-    def tab_width(self,pad,*args):
-        pad.insert(GUI.INSERT,' '*4)
+    def select_first(self, lb, event):
+        """
+        selects the first item in listbox so that it can be navigated
+        """
+        lb.select_set(0)
+
+    def tab_width(self, pad, *args):
+        """
+        sets tab with to 4 spaces, std everywhere
+
+        """
+        pad.insert(GUI.INSERT, ' ' * 4)
         return 'break'
 
     def remove_punc(self, r):
+        """
+        removes punctuation from words
+        """
         c = ''
         from string import punctuation
         for d in r:
@@ -106,43 +158,74 @@ class codeDisplay(object):
                 c += d
         return c
 
-    def default_words(self, pad):
-        pad.edit_separator()
-        import sys
-        sys.stdin = open('input.txt', 'r')
-        while True:
-            try:
-                r = map(str, raw_input().split())
-                for i in r:
-                    MyDict.insert(self.remove_punc(i))
-            except EOFError:
-                return
-        self.default_words(pad)
+    def insert_word(self, app2, pad, lb, lang, *args):
+        """
+        inserts word to the codepad from the autocomplete box
+        """
+        word = lb.get(GUI.ACTIVE).strip('\n')
+        coordinates1 = map(int, pad.index(GUI.INSERT).split('.'))
+        coordinates = str(coordinates1[0]) + '.0'
+        r = pad.get(coordinates, GUI.INSERT)
+        pos_space = 0
+        for i in range(len(r)):
+            if r[i] == ' ':
+                pos_space = i
+        if pos_space != 0:
+            pos_space += 1
+        coordinates = str(coordinates1[0]) + '.' + str(pos_space)
+        pad.delete(coordinates, GUI.INSERT)
+        pad.insert(GUI.INSERT, word)
+        self.syntax_highlight(pad, GUI.INSERT, 0, lang)
+        app2.withdraw()
+        global FLAG
+        FLAG = 1
 
-    def add_to_trie(self, pad, *args):
+    def add_to_trie(self, app2, pad, lb, *args):
+        """
+        adds words to trie
+        """
+        global FLAG
+        FLAG = 1
+        app2.withdraw()
         pad.edit_separator()
         r = pad.get('1.0', GUI.END)
         r = map(str, r.split())
         if not MyDict.contains(r[-1]):
             MyDict.insert(self.remove_punc(r[-1]))
 
-    def show_in_console(self, event, app2, pad, linepad, lang):
+    def show_in_console(self, event, app2, pad, linepad, lang, lb):
+        """
+        shows words in console. The main function which has
+        keypress bind to it, so it calls many other important
+        functions
+        """
         pad.edit_separator()
+        lb.delete(0, GUI.END)
         global FLAG
-        FLAG = 1
-        self.syntax_highlight(pad,GUI.INSERT,0,lang)
+        self.syntax_highlight(pad, GUI.INSERT, 0, lang)
         self.linenumber(pad, linepad)
+
         r = pad.get('1.0', GUI.INSERT)
         r = map(str, r.split())
+        # turn on autocomplete if letter detected
+        letters = [chr(i) for i in range(97, 123)] + [chr(i) for i in range(65, 91)]
+        if r[-1] in letters:
+            if FLAG:
+                app2.deiconify()
+                FLAG = 0
         if len(r) != 0:
             x = MyDict.autocomplete(r[-1])
-            lb = GUI.Listbox(app2, height=10, width=30)
             if len(x) and len(r):
                 for i in x:
                     lb.insert(GUI.END, i + '\n')
             lb.grid(row=1, column=1)
 
             pad.tag_configure('num', foreground='#ff69b4')
+            r = ''.join(r)
+            brackets = ['(', ')', '[', ']', '{', '}', '<', '>', ',', '+', '-', '*', '/']
+            for i in brackets:
+                r = r.replace(i, ' ')
+            r = map(str, r.split())
             try:
                 float(r[-1])
                 self.highlight_pattern(pad, r[-1], 'num')
@@ -153,7 +236,10 @@ class codeDisplay(object):
     fix
     """
 
-    def syntax_highlight(self, pad, pos=GUI.INSERT, flag=0, lang = 'c++'):
+    def syntax_highlight(self, pad, pos=GUI.INSERT, flag=0, lang='c++'):
+        """
+        highlights syntax
+        """
         pad.edit_separator()
         pad.tag_configure('default', foreground='#e0115f')
         pad.tag_configure('loops', foreground='green')
@@ -161,6 +247,8 @@ class codeDisplay(object):
         pad.tag_configure('normal', foreground='#f8f8f2')
         pad.tag_configure('quotes', foreground='gold')
         pad.tag_configure('A_datatypes', foreground='orange')
+        pad.tag_configure('num', foreground='#ff69b4')
+
         coordinates1 = map(int, pad.index(pos).split('.'))
         coordinates = str(coordinates1[0]) + '.0'
         if flag:
@@ -179,12 +267,12 @@ class codeDisplay(object):
             ncoordinates = str(coordinates1[0]) + '.' + str(s.index(i))
             if i in keywords[lang]['default']:
                 self.highlight_pattern(pad, i, 'default', ncoordinates, pos)
-            elif i in keywords[lang]['loops']:
+            if i in keywords[lang]['loops']:
                 self.highlight_pattern(pad, i, 'loops', ncoordinates, pos)
-            elif i in keywords[lang]['P_datatypes']:
+            if i in keywords[lang]['P_datatypes']:
                 self.highlight_pattern(
                     pad, i, 'P_datatypes', ncoordinates, pos)
-            elif i in keywords[lang]['A_datatypes']:
+            if i in keywords[lang]['A_datatypes']:
                 self.highlight_pattern(
                     pad, i, 'A_datatypes', ncoordinates, pos)
 
@@ -194,12 +282,14 @@ class codeDisplay(object):
         pattern = "'([A-Za-z0-9_\./\\-]*)'"
         self.highlight_pattern(pad, pattern, 'quotes', '1.0', 'end', True)
 
-
     """
     fix
     """
-    def open_highlight(self, pad, lang='c++'):
 
+    def open_highlight(self, pad, lang='c++'):
+        """
+        highlights syntax when opening a file
+        """
         pad.tag_configure('default', foreground='#e0115f')
         pad.tag_configure('loops', foreground='green')
         pad.tag_configure('P_datatypes', foreground='aqua')
@@ -214,7 +304,33 @@ class codeDisplay(object):
         pattern = "'([A-Za-z0-9_\./\\-]*)'"
         self.highlight_pattern(pad, pattern, 'quotes', '1.0', 'end', True)
 
-    def indentation(self, pad, linepad,lang='c++',*args):
+    def highlight_pattern(self, pad, pattern,
+                          tag, start="1.0", end="end", regexp=False):
+        """
+        searches for pattern to highlight on basis of tag
+        """
+        start = pad.index(start)
+        end = pad.index(end)
+        pad.mark_set("matchStart", start)
+        pad.mark_set("matchEnd", start)
+        pad.mark_set("searchLimit", end)
+
+        count = GUI.IntVar()
+        while True:
+            index = pad.search(pattern, "matchEnd", "searchLimit", count=count,
+                               regexp=regexp)
+            if index == "":
+                break
+            pad.mark_set("matchStart", index)
+            pad.mark_set("matchEnd", "%s+%sc" % (index, count.get()))
+            pad.tag_add(tag, "matchStart", "matchEnd")
+
+    def indentation(self, pad, linepad, lang='c++', *args):
+
+        """
+        produces auto indentation for code
+        python took some imagination ;)
+        """
         pad.edit_separator()
         if lang == 'c++':
             curr = pad.get('1.0', GUI.INSERT)
@@ -224,23 +340,23 @@ class codeDisplay(object):
             pad.insert(GUI.INSERT, '    ' * indent)
             cordinate = map(int, pad.index(GUI.INSERT).split('.'))
             if diff > 0:
-                pad.insert(GUI.INSERT, '\n' + ' '* 4* max(indent - 1, 0) + '}')
+                pad.insert(GUI.INSERT, '\n' + ' ' * 4 * max(indent - 1, 0) + '}')
                 pad.mark_set(GUI.INSERT, '%d.%d' % (cordinate[0], cordinate[1]))
         if lang == 'py':
             coordinates1 = map(int, pad.index(GUI.INSERT).split('.'))
             if coordinates1[0] != 1:
-                coordinates = str(coordinates1[0]-1) + '.0'
-                r = pad.get(coordinates, str(coordinates1[0]-1) + '.1111')
+                coordinates = str(coordinates1[0] - 1) + '.0'
+                r = pad.get(coordinates, str(coordinates1[0] - 1) + '.1111')
                 letters = list(str(r))
                 cnt = 0
-                #find indentation level
+                # find indentation level
                 for i in letters:
                     if i == ' ':
                         cnt += 1
                     else:
                         break
-                cnt = cnt/4
-                #check if indentation increasing keywords present
+                cnt = cnt / 4
+                # check if indentation increasing keywords present
                 f = 0
                 for i in keywords['py']['loops']:
                     if i in r:
@@ -248,49 +364,30 @@ class codeDisplay(object):
                         break
 
                 if f:
-                    pad.insert(GUI.INSERT,(' '*(cnt + 1)*4))
+                    pad.insert(GUI.INSERT, (' ' * (cnt + 1) * 4))
                 else:
-                    pad.insert(GUI.INSERT,(' '*(cnt)*4))
+                    pad.insert(GUI.INSERT, (' ' * (cnt) * 4))
         self.linenumber(pad, linepad)
 
-    def fast_backspace(self,pad,linepad,*args):
+    def fast_backspace(self, pad, linepad, *args):
+        """
+        so that you dont have to press backspace 4 times to go back to
+        outer indentaion level (esp for python)
+        """
         coordinates1 = map(int, pad.index(GUI.INSERT).split('.'))
         coordinates = str(coordinates1[0]) + '.0'
         r = pad.get(coordinates, GUI.INSERT)
+        if len(str(r)) % 4 == 0:
+            return
         if len(set(list(r))) == 1 and r[0] == u' ':
-            coordinates = str(coordinates1[0]) + '.' + str(max(0,coordinates1[1]-3))
-            pad.delete(coordinates,GUI.INSERT)
-        self.linenumber(pad,linepad)
-
-    def highlight_pattern(
-            self,
-            pad,
-            pattern,
-            tag,
-            start="1.0",
-            end="end",
-            regexp=False):
-        start = pad.index(start)
-        end = pad.index(end)
-        pad.mark_set("matchStart", start)
-        pad.mark_set("matchEnd", start)
-        pad.mark_set("searchLimit", end)
-
-        count = GUI.IntVar()
-        while True:
-            index = pad.search(
-                pattern,
-                "matchEnd",
-                "searchLimit",
-                count=count,
-                regexp=regexp)
-            if index == "":
-                break
-            pad.mark_set("matchStart", index)
-            pad.mark_set("matchEnd", "%s+%sc" % (index, count.get()))
-            pad.tag_add(tag, "matchStart", "matchEnd")
+            coordinates = str(coordinates1[0]) + '.' + str(max(0, coordinates1[1] - 3))
+            pad.delete(coordinates, GUI.INSERT)
+        self.linenumber(pad, linepad)
 
     def linenumber(self, pad, linepad):
+        """
+        keeps track of linenumber
+        """
         linepad.config(state=GUI.NORMAL)
         coordinate_pad = map(int, pad.index(GUI.END).split('.'))
         linepad.delete('1.0', GUI.END)
@@ -298,31 +395,43 @@ class codeDisplay(object):
             linepad.insert(GUI.END, str(i + 1) + '.\n')
         linepad.config(state=GUI.DISABLED)
 
+
 Display = codeDisplay()
 
 
 class fileFileMenu(object):
-
     def Exit(self):
+        """
+        exits program
+        :return:
+        """
         exit(0)
 
     def Open(self, app, pad, linepad, lang='c++'):
+        """
+        opens a file and displays it in pad
+        :return:
+        """
         from tkFileDialog import askopenfilename
         open_file = askopenfilename(parent=app)
         if len(open_file) == 0:
             return
         pad.delete('1.0', GUI.END)
         pad.insert(GUI.END, open(open_file).read())
-        Display.open_highlight(pad,lang)
+        Display.open_highlight(pad, lang)
         Display.linenumber(pad, linepad)
         x = open_file
         x = x.replace('/', '\\')
-        File.Filename(map(str, x.split('\\'))[-1])
-        File.FilePath(x)
-        File.Execpath(x.replace('cpp', 'exe'))
+        File.filename(map(str, x.split('\\'))[-1])
+        File.filepath(x)
+        File.execpath(x.replace('cpp', 'exe'))
         app.title(File.name)
 
     def Save(self, app, pad):
+        """
+        saves the contents in pad to file
+        to filename on window
+        """
         data = pad.get('1.0', GUI.END)[:-1]
         try:
             f = open(File.path, 'w')
@@ -335,6 +444,10 @@ class fileFileMenu(object):
             return -1
 
     def Save_As(self, app, pad):
+        """
+        saves the contents in pad to file
+        to specified filename
+        """
         from tkFileDialog import asksaveasfilename
         save_file = asksaveasfilename(parent=app)
         data = pad.get('1.0', GUI.END)[:-1]
@@ -343,41 +456,61 @@ class fileFileMenu(object):
         f.close()
         x = save_file
         x = x.replace('/', '\\')
-        File.Filename(map(str, x.split('\\'))[-1])
-        File.FilePath(x)
+        File.filename(map(str, x.split('\\'))[-1])
+        File.filepath(x)
         app.title(File.name)
+
+    def set_new_filedetails(self, name, path):
+        """
+        sets details of untitled when switching lang
+        """
+        File.filename(name)
+        File.filepath(path)
+
 
 cmd_file = fileFileMenu()
 
 
 class editFileMenu(object):
-
-    def undo(self, pad, linepad,lang='c++', *argv):
+    def undo(self, pad, linepad, lang='c++', *argv):
+        """
+        undo code
+        """
         try:
             pad.edit_undo()
             Display.linenumber(pad, linepad)
-            Display.open_highlight(pad,lang)
+            Display.open_highlight(pad, lang)
         except GUI.TclError:
             pass
 
-    def redo(self, pad, linepad,lang='c++', *argv):
+    def redo(self, pad, linepad, lang='c++', *argv):
+        """
+        redo code
+        """
         try:
             pad.edit_redo()
             Display.linenumber(pad, linepad)
-            Display.open_highlight(pad,lang)
+            Display.open_highlight(pad, lang)
         except GUI.TclError:
             pass
 
+    """
+    pending
+    """
+
     def select_all(self):
         pass
+
 
 edit = editFileMenu()
 
 
 class runFilemenu(object):
-
     def compile(self, app, pad, outputpad, lang='c++', *args):
-
+        """
+        compiles c++ currently
+        need MinGw in C drive to work
+        """
         if lang == 'c++':
             global FLAG
             FLAG = 0
@@ -409,7 +542,7 @@ class runFilemenu(object):
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE)
             status = p.communicate()[1]
-            outputpad.config(state = GUI.NORMAL)
+            outputpad.config(state=GUI.NORMAL)
             outputpad.delete('1.0', GUI.END)
             outputpad.insert(GUI.END, lang)
             if len(status) == 0:
@@ -421,11 +554,16 @@ class runFilemenu(object):
             p.terminate()
             outputpad.config(state=GUI.DISABLED)
         if lang == 'py':
-            outputpad.config(state = GUI.NORMAL)
-            outputpad.delete('1.0','end')
-            outputpad.insert(GUI.INSERT,'Python programs are interpreted. Press run instead')
+            outputpad.config(state=GUI.NORMAL)
+            outputpad.delete('1.0', 'end')
+            outputpad.insert(GUI.INSERT, 'Python programs are interpreted. Press run instead')
 
     def run(self, app, pad, outputpad, inputpad, lang='c++', *args):
+        """
+        runs python and c++ program
+        need python installed
+        c++ details in compile
+        """
         if lang == 'c++':
             outputpad.config(state=GUI.NORMAL)
             outputpad.delete('1.0', GUI.END)
@@ -449,18 +587,18 @@ class runFilemenu(object):
             outputpad.config(state=GUI.DISABLED)
 
         if lang == 'py':
-            cmd_file.Save(app,pad)
+            cmd_file.Save(app, pad)
             r = inputpad.get('1.0', GUI.END)
             f = open('input.txt', 'w')
             f.write(r)
             f.close()
-            outputpad.config(state = GUI.NORMAL)
-            f = open('error.txt','w')
-            status = subprocess.call('python '+File.path+'<input.txt >output.txt',shell=True,
+            outputpad.config(state=GUI.NORMAL)
+            f = open('error.txt', 'w')
+            status = subprocess.call('python ' + File.path + '<input.txt >output.txt', shell=True,
                                      stderr=f)
-            outputpad.config(state = GUI.NORMAL)
+            outputpad.config(state=GUI.NORMAL)
             outputpad.delete('1.0', GUI.END)
-            outputpad.insert(GUI.END, lang+'\n')
+            outputpad.insert(GUI.END, lang + '\n')
             if status == 0:
                 r = open('output.txt').read()
                 outputpad.delete('1.0', GUI.END)
@@ -472,5 +610,6 @@ class runFilemenu(object):
                 outputpad.insert(GUI.END, r)
                 outputpad.config(state=GUI.DISABLED)
             outputpad.config(state=GUI.DISABLED)
+
 
 run = runFilemenu()
