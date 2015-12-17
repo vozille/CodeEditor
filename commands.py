@@ -113,7 +113,7 @@ File = FileDetails()
 """
 Variables used here :
 :param app: the main window
-:param app2: the window for autocomplete
+:param frame2: the window for autocomplete
 :param pad: the textbox in which code is written
 :param lb: the listbox storing autocomplete words
 :param lang: programming language
@@ -127,17 +127,36 @@ Variables used here :
 
 
 class codeDisplay(object):
-    def escape(self, app2, *args):
+    def __init__(self):
+        self.cntlbcall = 0
+        self.lastinsert = '0.0'
+
+    def escape(self, frame2, pad, *args):
         """
         closes the suggestions box
         """
-        app2.withdraw()
+        self.cntlbcall = 0
+        frame2.pack_forget()
+        global FLAG
+        FLAG = 1
+        pad.focus()
 
-    def select_first(self, lb, event):
+    def select_first(self, frame2, lb, pad, event):
         """
         selects the first item in listbox so that it can be navigated
         """
-        lb.select_set(0)
+        if lb.size() == 0:
+            return
+        # self.lastinsert = pad.index(GUI.INSERT)
+        frame2.focus()
+        lb.select_set(self.cntlbcall)
+        lb.see(self.cntlbcall)
+
+        if self.cntlbcall != 0:
+            lb.select_clear(self.cntlbcall - 1)
+        self.cntlbcall += 1
+        if self.cntlbcall > lb.size():
+            self.escape(frame2, pad)
 
     def tab_width(self, pad, *args):
         """
@@ -147,25 +166,41 @@ class codeDisplay(object):
         pad.insert(GUI.INSERT, ' ' * 4)
         return 'break'
 
+    def show_outputpad(self, frame2, outputpad):
+
+        frame2.pack(side=GUI.TOP, fill=GUI.BOTH, expand=GUI.YES)
+        outputpad.pack(side=GUI.TOP, fill=GUI.BOTH, expand=GUI.YES)
+
+    def hide_outputpad(self, frame2, outputpad):
+
+        frame2.pack_forget()
+        outputpad.pack_forget()
+
     def remove_punc(self, r):
         """
         removes punctuation from words
         """
         c = ''
-        from string import punctuation
+        useless = ['(', ')', '[', ']', '{', '}', '<', '>', ',', '+', '-', '*', '/', '=', ',', '.']
         for d in r:
-            if d not in punctuation and d != ';' and d != ':' and d != '(' and d != ')':
+            if d not in useless:
                 c += d
         return c
 
-    def insert_word(self, app2, pad, lb, lang, *args):
+    def insert_word(self, frame2, pad, lb, lang, *args):
         """
         inserts word to the codepad from the autocomplete box
         """
-        word = lb.get(GUI.ACTIVE).strip('\n')
-        coordinates1 = map(int, pad.index(GUI.INSERT).split('.'))
+        # print self.lastinsert
+
+        if self.cntlbcall != 0:
+            self.cntlbcall -= 1
+        word = lb.get(self.cntlbcall).strip('\n')
+        pad.focus()
+        coordinates1 = map(int, str(self.lastinsert).split('.'))
         coordinates = str(coordinates1[0]) + '.0'
-        r = pad.get(coordinates, GUI.INSERT)
+        r = pad.get(coordinates, str(self.lastinsert))
+
         pos_space = 0
         for i in range(len(r)):
             if r[i] == ' ':
@@ -173,27 +208,31 @@ class codeDisplay(object):
         if pos_space != 0:
             pos_space += 1
         coordinates = str(coordinates1[0]) + '.' + str(pos_space)
-        pad.delete(coordinates, GUI.INSERT)
-        pad.insert(GUI.INSERT, word)
-        self.syntax_highlight(pad, GUI.INSERT, 0, lang)
-        app2.withdraw()
+        pad.delete(coordinates, coordinates + 'lineend')
+        pad.insert(self.lastinsert, word)
+        coordinates1 = map(int, str(self.lastinsert).split('.'))
+        coordinates1[-1] += len(word)
+        pad.mark_set(GUI.INSERT, '%d.%d' % (coordinates1[0], coordinates1[1]))
+        self.syntax_highlight(pad, lang, self.lastinsert, 0)
+        frame2.pack_forget()
         global FLAG
         FLAG = 1
+        self.cntlbcall = 0
 
-    def add_to_trie(self, app2, pad, lb, *args):
+    def add_to_trie(self, frame2, pad, lb, *args):
         """
         adds words to trie
         """
         global FLAG
         FLAG = 1
-        app2.withdraw()
+        frame2.pack_forget()
         pad.edit_separator()
         r = pad.get('1.0', GUI.END)
         r = map(str, r.split())
         if not MyDict.contains(r[-1]):
             MyDict.insert(self.remove_punc(r[-1]))
 
-    def show_in_console(self, event, app2, pad, linepad, lang, lb):
+    def show_in_console(self, event, pad, linepad, lang, lb, frame1, W1, bar, frame2, W2, outputpad):
         """
         shows words in console. The main function which has
         keypress bind to it, so it calls many other important
@@ -202,23 +241,46 @@ class codeDisplay(object):
         pad.edit_separator()
         lb.delete(0, GUI.END)
         global FLAG
-        self.syntax_highlight(pad, GUI.INSERT, 0, lang)
+        self.hide_outputpad(frame2, outputpad)
+        self.syntax_highlight(pad, lang, GUI.INSERT, 0)
         self.linenumber(pad, linepad)
+        self.lastinsert = pad.index(GUI.INSERT)
 
         r = pad.get('1.0', GUI.INSERT)
         r = map(str, r.split())
         # turn on autocomplete if letter detected
         letters = [chr(i) for i in range(97, 123)] + [chr(i) for i in range(65, 91)]
-        if r[-1] in letters:
-            if FLAG:
-                app2.deiconify()
-                FLAG = 0
+        try:
+            # pack in the same order
+            if r[-1] in letters:
+                if FLAG:
+                    # frame1.pack_forget()
+                    # linepad.pack_forget()
+                    # W1.pack_forget()
+                    # bar.pack_forget()
+                    frame2.pack_forget()
+                    lb.pack_forget()
+                    # W2.pack_forget()
+                    # outputpad.pack_forget()
+
+                    # frame1.pack(side=GUI.TOP, fill=GUI.BOTH, expand=GUI.YES)
+                    # linepad.pack(side=GUI.LEFT, fill=GUI.Y)
+                    # W1.pack(side=GUI.LEFT, fill=GUI.BOTH, expand=GUI.YES)
+                    # bar.pack(side=GUI.LEFT, fill=GUI.Y)
+                    W2.pack(side=GUI.TOP, fill=GUI.BOTH, expand=GUI.YES)
+                    lb.pack(side=GUI.TOP, fill=GUI.BOTH, expand=GUI.YES)
+                    # frame2.pack(side=GUI.TOP, fill=GUI.BOTH, expand=GUI.YES)
+                    # outputpad.pack(side=GUI.TOP, fill=GUI.BOTH, expand=GUI.YES)
+                    FLAG = 0
+                    self.cntlbcall = 0
+        except IndexError:
+            pass
         if len(r) != 0:
             x = MyDict.autocomplete(r[-1])
             if len(x) and len(r):
+                # self.cntlbcall = 0
                 for i in x:
                     lb.insert(GUI.END, i + '\n')
-            lb.grid(row=1, column=1)
 
             pad.tag_configure('num', foreground='#ff69b4')
             r = ''.join(r)
@@ -236,7 +298,7 @@ class codeDisplay(object):
     fix
     """
 
-    def syntax_highlight(self, pad, pos=GUI.INSERT, flag=0, lang='c++'):
+    def syntax_highlight(self, pad, lang='c++', pos=GUI.INSERT, flag=0):
         """
         highlights syntax
         """
@@ -479,7 +541,7 @@ class editFileMenu(object):
         try:
             pad.edit_undo()
             Display.linenumber(pad, linepad)
-            Display.open_highlight(pad, lang)
+            # Display.open_highlight(pad, lang)
         except GUI.TclError:
             pass
 
@@ -490,7 +552,7 @@ class editFileMenu(object):
         try:
             pad.edit_redo()
             Display.linenumber(pad, linepad)
-            Display.open_highlight(pad, lang)
+            Display.syntax_highlight(pad, lang)
         except GUI.TclError:
             pass
 
@@ -511,6 +573,8 @@ class runFilemenu(object):
         compiles c++ currently
         need MinGw in C drive to work
         """
+        frame2 = args[0]
+        Display.show_outputpad(frame2, outputpad)
         if lang == 'c++':
             global FLAG
             FLAG = 0
@@ -544,7 +608,6 @@ class runFilemenu(object):
             status = p.communicate()[1]
             outputpad.config(state=GUI.NORMAL)
             outputpad.delete('1.0', GUI.END)
-            outputpad.insert(GUI.END, lang)
             if len(status) == 0:
                 outputpad.insert(GUI.END, 'compiled successfully \n')
             else:
@@ -564,6 +627,9 @@ class runFilemenu(object):
         need python installed
         c++ details in compile
         """
+        frame2 = args[0]
+        Display.show_outputpad(frame2, outputpad)
+
         if lang == 'c++':
             outputpad.config(state=GUI.NORMAL)
             outputpad.delete('1.0', GUI.END)
