@@ -97,6 +97,11 @@ class FileDetails(object):
         self.path = ''
         self.name = ''
         self.execute = ''
+        """
+        limit tabs to 30
+        """
+        self.filenames = ['untitled.cpp']*30
+        self.filepaths = [str(os.getcwd())+'untitled.cpp']*30
 
     def filename(self, data):
         self.name = data
@@ -126,10 +131,11 @@ Variables used here :
 """
 
 
-class codeDisplay(object):
+class CodeDisplay(object):
     def __init__(self):
         self.cntlbcall = 0
         self.lastinsert = '0.0'
+        self.last_tab_index = 0
 
     def escape(self, frame2, pad, *args):
         """
@@ -140,6 +146,16 @@ class codeDisplay(object):
         global FLAG
         FLAG = 1
         pad.focus()
+
+    def switch_tabs(self, app, book, *args):
+        index = book.index(book.select())
+        if index == self.last_tab_index:
+            return
+        self.last_tab_index = index
+        File.name = File.filenames[index]
+        File.path = File.filepaths[index]
+        app.title(File.name)
+
 
     def select_first(self, frame2, lb, pad, event):
         """
@@ -167,12 +183,16 @@ class codeDisplay(object):
         return 'break'
 
     def show_outputpad(self, frame2, outputpad):
-
+        """
+        shows the output console
+        """
         frame2.pack(side=GUI.TOP, fill=GUI.BOTH, expand=GUI.YES)
         outputpad.pack(side=GUI.TOP, fill=GUI.BOTH, expand=GUI.YES)
 
     def hide_outputpad(self, frame2, outputpad):
-
+        """
+        hides the output console
+        """
         frame2.pack_forget()
         outputpad.pack_forget()
 
@@ -181,11 +201,24 @@ class codeDisplay(object):
         removes punctuation from words
         """
         c = ''
-        useless = ['(', ')', '[', ']', '{', '}', '<', '>', ',', '+', '-', '*', '/', '=', ',', '.']
+        useless = [ ',', '+', '-', '*', '/', '=', ',', '.']
         for d in r:
             if d not in useless:
                 c += d
+        brackets = ['(', ')', '[', ']', '{', '}', '<', '>']
+        d = str(c)
+        c = ''
+        brac_cnt = 0
+        for i in d:
+            if i == '(' or i == '[' or i in '{':
+                brac_cnt += 1
+            if i == ')' or i == ']' or i == '}':
+                brac_cnt -= 1
+            if i not in brackets:
+                if brac_cnt <= 0:
+                    c += i
         return c
+
 
     def insert_word(self, frame2, pad, lb, lang, *args):
         """
@@ -196,12 +229,12 @@ class codeDisplay(object):
         if self.cntlbcall != 0:
             self.cntlbcall -= 1
         word = lb.get(self.cntlbcall).strip('\n')
-        pad.focus()
+
         coordinates1 = map(int, str(self.lastinsert).split('.'))
         coordinates = str(coordinates1[0]) + '.0'
         r = pad.get(coordinates, str(self.lastinsert))
-
         pos_space = 0
+
         for i in range(len(r)):
             if r[i] == ' ':
                 pos_space = i
@@ -218,6 +251,9 @@ class codeDisplay(object):
         global FLAG
         FLAG = 1
         self.cntlbcall = 0
+        pad.focus_force()
+        return "break"
+        # pad.insert('end',' ')
 
     def add_to_trie(self, frame2, pad, lb, *args):
         """
@@ -232,7 +268,7 @@ class codeDisplay(object):
         if not MyDict.contains(r[-1]):
             MyDict.insert(self.remove_punc(r[-1]))
 
-    def show_in_console(self, event, pad, linepad, lang, lb, frame1, W1, bar, frame2, W2, outputpad):
+    def show_in_console(self,app,book, event, pad, linepad, lang, lb, frame1, W1, bar, frame2, W2, outputpad):
         """
         shows words in console. The main function which has
         keypress bind to it, so it calls many other important
@@ -241,9 +277,16 @@ class codeDisplay(object):
         pad.edit_separator()
         lb.delete(0, GUI.END)
         global FLAG
+        FLAG = 1
         self.hide_outputpad(frame2, outputpad)
         self.syntax_highlight(pad, lang, GUI.INSERT, 0)
         self.linenumber(pad, linepad)
+        self.switch_tabs(app, book)
+
+        # avoid popping up autocomplete if text not entered in pad at all
+        chk = pad.get('1.0',GUI.INSERT)
+        if pad.get('1.0',self.lastinsert) == chk:
+            return 'break'
         self.lastinsert = pad.index(GUI.INSERT)
 
         r = pad.get('1.0', GUI.INSERT)
@@ -254,25 +297,14 @@ class codeDisplay(object):
             # pack in the same order
             if r[-1] in letters:
                 if FLAG:
-                    # frame1.pack_forget()
-                    # linepad.pack_forget()
-                    # W1.pack_forget()
-                    # bar.pack_forget()
+
                     frame2.pack_forget()
                     lb.pack_forget()
-                    # W2.pack_forget()
-                    # outputpad.pack_forget()
-
-                    # frame1.pack(side=GUI.TOP, fill=GUI.BOTH, expand=GUI.YES)
-                    # linepad.pack(side=GUI.LEFT, fill=GUI.Y)
-                    # W1.pack(side=GUI.LEFT, fill=GUI.BOTH, expand=GUI.YES)
-                    # bar.pack(side=GUI.LEFT, fill=GUI.Y)
                     W2.pack(side=GUI.TOP, fill=GUI.BOTH, expand=GUI.YES)
                     lb.pack(side=GUI.TOP, fill=GUI.BOTH, expand=GUI.YES)
-                    # frame2.pack(side=GUI.TOP, fill=GUI.BOTH, expand=GUI.YES)
-                    # outputpad.pack(side=GUI.TOP, fill=GUI.BOTH, expand=GUI.YES)
                     FLAG = 0
                     self.cntlbcall = 0
+
         except IndexError:
             pass
         if len(r) != 0:
@@ -284,7 +316,7 @@ class codeDisplay(object):
 
             pad.tag_configure('num', foreground='#ff69b4')
             r = ''.join(r)
-            brackets = ['(', ')', '[', ']', '{', '}', '<', '>', ',', '+', '-', '*', '/']
+            brackets = ['(', ')', '[', ']', '{', '}', '<', '>', ',', '+', '-', '*', '/','=']
             for i in brackets:
                 r = r.replace(i, ' ')
             r = map(str, r.split())
@@ -293,10 +325,11 @@ class codeDisplay(object):
                 self.highlight_pattern(pad, r[-1], 'num')
             except ValueError:
                 pass
+            except IndexError:
+                pass
 
-    """
-    fix
-    """
+    # TODO: Add feature to highlight comments
+    # TODO: fix corner cases
 
     def syntax_highlight(self, pad, lang='c++', pos=GUI.INSERT, flag=0):
         """
@@ -344,9 +377,7 @@ class codeDisplay(object):
         pattern = "'([A-Za-z0-9_\./\\-]*)'"
         self.highlight_pattern(pad, pattern, 'quotes', '1.0', 'end', True)
 
-    """
-    fix
-    """
+    # TODO : fix corner cases
 
     def open_highlight(self, pad, lang='c++'):
         """
@@ -408,7 +439,7 @@ class codeDisplay(object):
             coordinates1 = map(int, pad.index(GUI.INSERT).split('.'))
             if coordinates1[0] != 1:
                 coordinates = str(coordinates1[0] - 1) + '.0'
-                r = pad.get(coordinates, str(coordinates1[0] - 1) + '.1111')
+                r = pad.get(coordinates, coordinates + 'lineend')
                 letters = list(str(r))
                 cnt = 0
                 # find indentation level
@@ -456,12 +487,12 @@ class codeDisplay(object):
         for i in range(coordinate_pad[0] - 1):
             linepad.insert(GUI.END, str(i + 1) + '.\n')
         linepad.config(state=GUI.DISABLED)
+        linepad.see(GUI.END)
+
+Display = CodeDisplay()
 
 
-Display = codeDisplay()
-
-
-class fileFileMenu(object):
+class FilesFileMenu(object):
     def Exit(self):
         """
         exits program
@@ -469,7 +500,7 @@ class fileFileMenu(object):
         """
         exit(0)
 
-    def Open(self, app, pad, linepad, lang='c++'):
+    def Open(self, app, book, pad, linepad, lang='c++'):
         """
         opens a file and displays it in pad
         :return:
@@ -480,14 +511,26 @@ class fileFileMenu(object):
             return
         pad.delete('1.0', GUI.END)
         pad.insert(GUI.END, open(open_file).read())
-        Display.open_highlight(pad, lang)
-        Display.linenumber(pad, linepad)
+
         x = open_file
         x = x.replace('/', '\\')
         File.filename(map(str, x.split('\\'))[-1])
         File.filepath(x)
         File.execpath(x.replace('cpp', 'exe'))
         app.title(File.name)
+        book.tab(book.index(book.select()), text = File.name)
+
+        File.filenames[book.index(book.select())] = File.name
+        File.filepaths[book.index(book.select())] = File.path
+        check = map(str,File.name.split('.'))
+        if 'cpp' in check[-1] or 'c++' in check[-1]:
+            lang = 'c++'
+        else:
+            lang = 'py'
+        Display.open_highlight(pad, lang)
+        Display.linenumber(pad, linepad)
+        global FLAG
+        FLAG = 1
 
     def Save(self, app, pad):
         """
@@ -522,6 +565,12 @@ class fileFileMenu(object):
         File.filepath(x)
         app.title(File.name)
 
+    def create_new_tab(self, widget, *args):
+        widget.create_tab()
+
+    def close_tab(self, widget, *args):
+        widget.destroy_tab()
+
     def set_new_filedetails(self, name, path):
         """
         sets details of untitled when switching lang
@@ -530,10 +579,10 @@ class fileFileMenu(object):
         File.filepath(path)
 
 
-cmd_file = fileFileMenu()
+cmd_file = FilesFileMenu()
 
 
-class editFileMenu(object):
+class EditFileMenu(object):
     def undo(self, pad, linepad, lang='c++', *argv):
         """
         undo code
@@ -556,18 +605,15 @@ class editFileMenu(object):
         except GUI.TclError:
             pass
 
-    """
-    pending
-    """
-
+    #TODO : add more features
     def select_all(self):
         pass
 
 
-edit = editFileMenu()
+edit = EditFileMenu()
 
 
-class runFilemenu(object):
+class RunFilemenu(object):
     def compile(self, app, pad, outputpad, lang='c++', *args):
         """
         compiles c++ currently
@@ -627,6 +673,7 @@ class runFilemenu(object):
         need python installed
         c++ details in compile
         """
+        global FLAG
         frame2 = args[0]
         Display.show_outputpad(frame2, outputpad)
 
@@ -634,10 +681,8 @@ class runFilemenu(object):
             outputpad.config(state=GUI.NORMAL)
             outputpad.delete('1.0', GUI.END)
             if FLAG:
-                x = self.compile(app, pad, outputpad)
-                # compilation failed, terminate
-                if x == -1:
-                    outputpad.insert(GUI.END, 'Compilation Failed.. Press Compile to get details')
+                # compilation hasnt happened, terminate
+                outputpad.insert(GUI.END, 'Compile First')
             if not os.path.exists('a.exe'):
                 outputpad.delete('1.0', GUI.END)
                 outputpad.insert(GUI.END, 'Compilation Failed.. Press Compile to get details')
@@ -678,4 +723,4 @@ class runFilemenu(object):
             outputpad.config(state=GUI.DISABLED)
 
 
-run = runFilemenu()
+run = RunFilemenu()
