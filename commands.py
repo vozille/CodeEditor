@@ -100,8 +100,8 @@ class FileDetails(object):
         """
         limit tabs to 30
         """
-        self.filenames = ['untitled.cpp']*30
-        self.filepaths = [str(os.getcwd())+'untitled.cpp']*30
+        self.filenames = ['untitled.cpp'] * 30
+        self.filepaths = [str(os.getcwd()) + 'untitled.cpp'] * 30
 
     def filename(self, data):
         self.name = data
@@ -136,6 +136,7 @@ class CodeDisplay(object):
         self.cntlbcall = 0
         self.lastinsert = '0.0'
         self.last_tab_index = 0
+        self.double_quote = 0
 
     def escape(self, frame2, pad, *args):
         """
@@ -155,7 +156,6 @@ class CodeDisplay(object):
         File.name = File.filenames[index]
         File.path = File.filepaths[index]
         app.title(File.name)
-
 
     def select_first(self, frame2, lb, pad, event):
         """
@@ -201,7 +201,7 @@ class CodeDisplay(object):
         removes punctuation from words
         """
         c = ''
-        useless = [ ',', '+', '-', '*', '/', '=', ',', '.']
+        useless = [',', '+', '-', '*', '/', '=', ',', '.']
         for d in r:
             if d not in useless:
                 c += d
@@ -218,7 +218,6 @@ class CodeDisplay(object):
                 if brac_cnt <= 0:
                     c += i
         return c
-
 
     def insert_word(self, frame2, pad, lb, lang, *args):
         """
@@ -246,7 +245,7 @@ class CodeDisplay(object):
         coordinates1 = map(int, str(self.lastinsert).split('.'))
         coordinates1[-1] += len(word)
         pad.mark_set(GUI.INSERT, '%d.%d' % (coordinates1[0], coordinates1[1]))
-        self.syntax_highlight(pad, lang, self.lastinsert, 0)
+        self.syntax_highlight(pad, lang, GUI.INSERT, 0)
         frame2.pack_forget()
         global FLAG
         FLAG = 1
@@ -268,7 +267,7 @@ class CodeDisplay(object):
         if not MyDict.contains(r[-1]):
             MyDict.insert(self.remove_punc(r[-1]))
 
-    def show_in_console(self,app,book, event, pad, linepad, lang, lb, frame1, W1, bar, frame2, W2, outputpad):
+    def show_in_console(self, app, book, event, pad, linepad, lang, lb, frame1, W1, bar, frame2, W2, outputpad):
         """
         shows words in console. The main function which has
         keypress bind to it, so it calls many other important
@@ -284,8 +283,8 @@ class CodeDisplay(object):
         self.switch_tabs(app, book)
 
         # avoid popping up autocomplete if text not entered in pad at all
-        chk = pad.get('1.0',GUI.INSERT)
-        if pad.get('1.0',self.lastinsert) == chk:
+        chk = pad.get('1.0', GUI.INSERT)
+        if pad.get('1.0', self.lastinsert) == chk:
             return 'break'
         self.lastinsert = pad.index(GUI.INSERT)
 
@@ -297,7 +296,6 @@ class CodeDisplay(object):
             # pack in the same order
             if r[-1] in letters:
                 if FLAG:
-
                     frame2.pack_forget()
                     lb.pack_forget()
                     W2.pack(side=GUI.TOP, fill=GUI.BOTH, expand=GUI.YES)
@@ -316,7 +314,7 @@ class CodeDisplay(object):
 
             pad.tag_configure('num', foreground='#ff69b4')
             r = ''.join(r)
-            brackets = ['(', ')', '[', ']', '{', '}', '<', '>', ',', '+', '-', '*', '/','=']
+            brackets = ['(', ')', '[', ']', '{', '}', '<', '>', ',', '+', '-', '*', '/', '=']
             for i in brackets:
                 r = r.replace(i, ' ')
             r = map(str, r.split())
@@ -328,56 +326,125 @@ class CodeDisplay(object):
             except IndexError:
                 pass
 
-    # TODO: Add feature to highlight comments
-    # TODO: fix corner cases
+    # TODO: Add feature to highlight multiline comments
 
     def syntax_highlight(self, pad, lang='c++', pos=GUI.INSERT, flag=0):
         """
         highlights syntax
         """
         pad.edit_separator()
+
         pad.tag_configure('default', foreground='#e0115f')
         pad.tag_configure('loops', foreground='green')
         pad.tag_configure('P_datatypes', foreground='aqua')
         pad.tag_configure('normal', foreground='#f8f8f2')
         pad.tag_configure('quotes', foreground='gold')
         pad.tag_configure('A_datatypes', foreground='orange')
+        pad.tag_configure('comment', foreground='pink')
+        pad.tag_configure('multicomment', foreground='#2aa198')
         pad.tag_configure('num', foreground='#ff69b4')
 
         coordinates1 = map(int, pad.index(pos).split('.'))
         coordinates = str(coordinates1[0]) + '.0'
+        startline = coordinates
         if flag:
             coordinates = '1.0'
             pos = 'end'
         else:
             pos = pos + ' lineend'
         r = pad.get(coordinates, pos)
-        brackets = ['(', ')', '[', ']', '{', '}', '<', '>', ',']
+
+        if '//' in r and lang == 'c++':
+            coordinates = str(coordinates1[0]) + '.' + str(r.index('//'))
+            pad.tag_remove('normal', coordinates, pos)
+            pad.tag_remove('default', coordinates, pos)
+            pad.tag_remove('default', coordinates, pos)
+            pad.tag_remove('loops', coordinates, pos)
+            pad.tag_remove('A_datatypes', coordinates, pos)
+            pad.tag_remove('P_datatypes', coordinates, pos)
+            pad.tag_add('comment', coordinates, pos)
+            return 'break'
+
+        if '#' in r and lang == 'py':
+            coordinates = str(coordinates1[0]) + '.' + str(r.index('#'))
+            pad.tag_remove('normal', coordinates, pos)
+            pad.tag_remove('default', coordinates, pos)
+            pad.tag_remove('default', coordinates, pos)
+            pad.tag_remove('loops', coordinates, pos)
+            pad.tag_remove('A_datatypes', coordinates, pos)
+            pad.tag_remove('P_datatypes', coordinates, pos)
+            pad.tag_add('comment', coordinates, pos)
+            return 'break'
+
+        # check if word a function or not
+        possible_func = 0
+        try:
+            if r[-1] == '(':
+                possible_func = 1
+        except IndexError:
+            pass
+
+        brackets = ['(', ')', '[', ']', '{', '}', '<', '>', ',', ':']
         for i in brackets:
             r = r.replace(i, ' ')
         s = r
         r = map(str, s.split())
         t = map(str, s.split('\n'))
-        for i in r:
-            ncoordinates = str(coordinates1[0]) + '.' + str(s.index(i))
-            if i in keywords[lang]['default']:
-                self.highlight_pattern(pad, i, 'default', ncoordinates, pos)
-            if i in keywords[lang]['loops']:
-                self.highlight_pattern(pad, i, 'loops', ncoordinates, pos)
-            if i in keywords[lang]['P_datatypes']:
-                self.highlight_pattern(
-                    pad, i, 'P_datatypes', ncoordinates, pos)
-            if i in keywords[lang]['A_datatypes']:
-                self.highlight_pattern(
-                    pad, i, 'A_datatypes', ncoordinates, pos)
+        try:
+            coordinates1[1] = s.rfind(r[-1])
+        except IndexError:
+            return 'break'
+        coordinates = str(coordinates1[0]) + '.' + str(max(coordinates1[1] + len(r[-1]), 0))
+        coordinates1 = str(coordinates1[0]) + '.' + str(coordinates1[1])
+        word = pad.get(coordinates1, coordinates)
 
-        pattern = '"([A-Za-z0-9_\./\\-]*)"'
-        self.highlight_pattern(pad, pattern, 'quotes', '1.0', 'end', True)
+        self.double_quote = s.count('"')
+        if self.double_quote%2 :
+            pad.tag_add('quotes', coordinates1, coordinates)
+            return 'break'
+        if s.count("'")%2:
+            if lang == 'c++':
+                pad.tag_add('num', coordinates1, coordinates)
+            else:
+                pad.tag_add('quotes', coordinates1, coordinates)
+            return 'break'
 
-        pattern = "'([A-Za-z0-9_\./\\-]*)'"
-        self.highlight_pattern(pad, pattern, 'quotes', '1.0', 'end', True)
+        if word in keywords[lang]['default']:
+            possible_func = 0
+            pad.tag_remove('normal', coordinates1, coordinates)
+            pad.tag_remove('comment', startline, pos)
+            pad.tag_add('default', coordinates1, coordinates)
+        elif word in keywords[lang]['loops']:
+            possible_func = 0
+            pad.tag_remove('normal', coordinates1, coordinates)
+            pad.tag_remove('comment', startline, pos)
+            pad.tag_add('loops', coordinates1, coordinates)
+        elif word in keywords[lang]['P_datatypes']:
+            possible_func = 0
+            pad.tag_remove('normal', coordinates1, coordinates)
+            pad.tag_remove('comment', startline, pos)
+            pad.tag_add('P_datatypes', coordinates1, coordinates)
+        elif word in keywords[lang]['A_datatypes']:
+            possible_func = 0
+            pad.tag_remove('normal', coordinates1, coordinates)
+            pad.tag_remove('comment', startline, pos)
+            pad.tag_add('A_datatypes', coordinates1, coordinates)
+        else:
+            pad.tag_remove('normal', coordinates1, coordinates)
+            pad.tag_remove('comment', startline, pos)
+            pad.tag_add('normal', coordinates1, coordinates)
+
+        if possible_func:
+            if '.' in word:
+                return 'break'
+            keywords[lang]['P_datatypes'].append(word)
+            pad.tag_remove('normal', coordinates1, coordinates)
+            pad.tag_remove('comment', startline, pos)
+            pad.tag_add('P_datatypes', coordinates1, coordinates)
+
 
     # TODO : fix corner cases
+    # TODO : if possible, replace it with something better
 
     def open_highlight(self, pad, lang='c++'):
         """
@@ -489,6 +556,7 @@ class CodeDisplay(object):
         linepad.config(state=GUI.DISABLED)
         linepad.see(GUI.END)
 
+
 Display = CodeDisplay()
 
 
@@ -518,11 +586,11 @@ class FilesFileMenu(object):
         File.filepath(x)
         File.execpath(x.replace('cpp', 'exe'))
         app.title(File.name)
-        book.tab(book.index(book.select()), text = File.name)
+        book.tab(book.index(book.select()), text=File.name)
 
         File.filenames[book.index(book.select())] = File.name
         File.filepaths[book.index(book.select())] = File.path
-        check = map(str,File.name.split('.'))
+        check = map(str, File.name.split('.'))
         if 'cpp' in check[-1] or 'c++' in check[-1]:
             lang = 'c++'
         else:
@@ -605,7 +673,7 @@ class EditFileMenu(object):
         except GUI.TclError:
             pass
 
-    #TODO : add more features
+    # TODO : add more features
     def select_all(self):
         pass
 
