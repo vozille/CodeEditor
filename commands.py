@@ -344,6 +344,7 @@ class CodeDisplay(object):
         pad.tag_configure('multicomment', foreground='#2aa198')
         pad.tag_configure('num', foreground='#ff69b4')
 
+
         coordinates1 = map(int, pad.index(pos).split('.'))
         coordinates = str(coordinates1[0]) + '.0'
         startline = coordinates
@@ -353,6 +354,34 @@ class CodeDisplay(object):
         else:
             pos = pos + ' lineend'
         r = pad.get(coordinates, pos)
+
+        if lang == 'c++':
+            wholetext = pad.get('1.0','end')
+            if wholetext.count('/*') - wholetext.count('*/') > 0:
+                pos = GUI.INSERT
+                # print [pad.search('/*','1.0','insert',backwards=False)]
+                pad.tag_remove('normal', coordinates, pos)
+                pad.tag_remove('default', coordinates, pos)
+                pad.tag_remove('default', coordinates, pos)
+                pad.tag_remove('loops', coordinates, pos)
+                pad.tag_remove('A_datatypes', coordinates, pos)
+                pad.tag_remove('P_datatypes', coordinates, pos)
+                pad.tag_remove('comment', coordinates, pos)
+                pad.tag_add('multicomment', coordinates, pos)
+                return 'break'
+        if lang == 'py':
+            wholetext = pad.get('1.0','end')
+            if wholetext.count('"""')%2:
+                pos = GUI.INSERT
+                pad.tag_remove('normal', coordinates, pos)
+                pad.tag_remove('default', coordinates, pos)
+                pad.tag_remove('default', coordinates, pos)
+                pad.tag_remove('loops', coordinates, pos)
+                pad.tag_remove('A_datatypes', coordinates, pos)
+                pad.tag_remove('P_datatypes', coordinates, pos)
+                pad.tag_remove('comment', coordinates, pos)
+                pad.tag_add('multicomment', coordinates, pos)
+                return 'break'
 
         if '//' in r and lang == 'c++':
             coordinates = str(coordinates1[0]) + '.' + str(r.index('//'))
