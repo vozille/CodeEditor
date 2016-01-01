@@ -3,7 +3,7 @@ A code editor written in python. Started as a small project to implement auto-co
 
 ![Image of codeeditor](http://i.imgur.com/VyA9y9a.png)
 
-** I am taking a break from this now, it works fine **
+**I am taking a break from this now, it works fine**
 
 Current status after 1 month:
 - fixed autocomplete
