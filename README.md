@@ -1,5 +1,5 @@
 # CodeEditor
-A code editor written in python. Started as a small project to implement auto-complete code by using Trie data structure
+A code editor written in python-2.7 using all built-in libraries. Started as a small project to implement auto-complete code by using Trie data structure
 
 ![Image of codeeditor](http://i.imgur.com/VyA9y9a.png)
 
