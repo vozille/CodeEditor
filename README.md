@@ -1,9 +1,11 @@
 # CodeEditor
 A code editor written in python. Started as a small project to implement auto-complete code by using Trie data structure
 
-![Image of codeeditor](http://i.imgur.com/LCQeBj4.png)
+![Image of codeeditor](http://i.imgur.com/VyA9y9a.png)
 
-Current status after 25 days:
+** I am taking a break from this now, it works fine **
+
+Current status after 1 month:
 - fixed autocomplete
 - changed design slightly
 - added tabs
@@ -17,6 +19,8 @@ Usage:
 - The frame at the bottom represents the output, it shows the results of compile/run
 
 Issuses:
-- slight bugs with custom syntax highlight
+- __add any issuse here__
+
+TODO:
 - Add java support
 - Add a light theme
