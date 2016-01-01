@@ -17,6 +17,9 @@ Usage:
 - The right frame is where you specify input (if any)
 - The autocomplete appears at the bottom, press down and tab to select and insert the word
 - The frame at the bottom represents the output, it shows the results of compile/run
+- The add button adds a new tab
+- The delete button closes the current tab
+- Select the language manually if you switch tabs/open a new file with different language
 
 Issuses:
 - __add any issuse here__
