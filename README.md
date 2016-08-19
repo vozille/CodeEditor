@@ -1,7 +1,12 @@
 # CodeEditor
 A code editor written in python-2.7 using all built-in libraries. Started as a small project to implement auto-complete code by using Trie data structure
 
-![Image of codeeditor](https://github.com/vozille/CodeEditor/blob/master/Screenshot/linux.png)
+**Windows**
+
+![Image of codeeditor](https://github.com/vozille/CodeEditor/blob/master/Screenshot/Windows.png)
+
+**Ubuntu**
+
 ![Linux image](https://github.com/vozille/CodeEditor/blob/master/Screenshot/linux.png)
 
 **I am taking a break from this now, it works fine**
