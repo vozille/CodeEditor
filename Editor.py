@@ -12,7 +12,7 @@ import Tkinter as GUI
 import ttk
 import ScrolledText
 import commands
-
+import os
 lang = ''
 
 
@@ -115,8 +115,36 @@ def main():
     cmd_file = commands.FilesFileMenu()
     edit = commands.EditFileMenu()
     run = commands.RunFilemenu()
+    imgdir = '/home/anwesh/PycharmProjects/CodeEditor'
+    print imgdir
+    i1 = GUI.PhotoImage("img_close", file=os.path.join(imgdir, 'close.png'))
+    i2 = GUI.PhotoImage("img_closeactive",
+                            file=os.path.join(imgdir, 'close.png'))
+    i3 = GUI.PhotoImage("img_closepressed",
+                            file=os.path.join(imgdir, 'close.png'))
 
-    book = ttk.Notebook(app)
+    style = ttk.Style()
+
+    style.element_create("close", "image", "img_close",
+                         ("active", "pressed", "!disabled", "img_closepressed"),
+                         ("active", "!disabled", "img_closeactive"), border=8, sticky='')
+
+    style.layout("ButtonNotebook", [("ButtonNotebook.client", {"sticky": "nswe"})])
+    style.layout("ButtonNotebook.Tab", [
+        ("ButtonNotebook.tab", {"sticky": "nswe", "children":
+            [("ButtonNotebook.padding", {"side": "top", "sticky": "nswe",
+                                         "children":
+                                             [("ButtonNotebook.focus", {"side": "top", "sticky": "nswe",
+                                                                        "children":
+                                                                            [("ButtonNotebook.label",
+                                                                              {"side": "left", "sticky": ''}),
+                                                                             ("ButtonNotebook.close",
+                                                                              {"side": "left", "sticky": ''})]
+                                                                        })]
+                                         })]
+                                })]
+                 )
+    book = ttk.Notebook(app, style="ButtonNotebook")
 
     def useless():
         print 'sexy'
@@ -210,6 +238,37 @@ def main():
         code.pad[index()], code.linepad[index()], lang, event))
     app.bind('<BackSpace>', lambda event: display.fast_backspace(
         code.pad[index()], code.linepad[index()], event))
+    """
+    The close button tab
+    """
+
+    def btn_press(event):
+        x, y, widget = event.x, event.y, event.widget
+        elem = widget.identify(x, y)
+        index_tab = widget.index("@%d,%d" % (x, y))
+
+        if "close" in elem:
+            widget.state(['pressed'])
+            widget.pressed_index = index_tab
+
+    def btn_release(event):
+        x, y, widget = event.x, event.y, event.widget
+
+        if not widget.instate(['pressed']):
+            return
+
+        elem = widget.identify(x, y)
+        index = widget.index("@%d,%d" % (x, y))
+
+        if "close" in elem and widget.pressed_index == index:
+            widget.forget(index)
+            widget.event_generate("<<NotebookClosedTab>>")
+
+        widget.state(["!pressed"])
+        widget.pressed_index = None
+
+    app.bind_class("TNotebook", "<ButtonPress-1>", btn_press, True)
+    app.bind_class("TNotebook", "<ButtonRelease-1>", btn_release)
 
     # TODO : Move these somwehre else
 
