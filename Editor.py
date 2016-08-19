@@ -15,6 +15,7 @@ import commands
 
 lang = ''
 
+
 class DisplayWidget():
     def __init__(self, book):
         """
@@ -216,28 +217,28 @@ def main():
         cmd_file.create_new_tab(code)
         r = app.geometry().split('+')
         coordinates = map(int,r[0].split('x'))
-        new_tab_button.place_forget()
-        new_tab_button.place(x = coordinates[0] - 60, y = -0.5)
+        # new_tab_button.place_forget()
+        # new_tab_button.place(x = coordinates[0] - 60, y = -0.5)
 
     def remove_tab(*args):
         cmd_file.close_tab(code)
         r = app.geometry().split('+')
         coordinates = map(int,r[0].split('x'))
-        del_tab_button.place_forget()
-        del_tab_button.place(x = coordinates[0] - 30, y = -0.5)
+        # del_tab_button.place_forget()
+        # del_tab_button.place(x = coordinates[0] - 30, y = -0.5)
 
-    new_tab_button = GUI.Button(book,text = 'add',bg='#228b22',fg='white')
-    new_tab_button.place(x = 740, y = -0.5)
-    new_tab_button.bind('<Button-1>',add_tab)
-
-    del_tab_button = GUI.Button(book,text = 'del',bg='maroon',fg='white')
-    del_tab_button.place(x = 770, y = -0.5)
-    del_tab_button.bind('<Button-1>',remove_tab)
+    # new_tab_button = GUI.Button(book,text = 'add',bg='#228b22',fg='white')
+    # new_tab_button.place(x = 740, y = -0.5)
+    # new_tab_button.bind('<Button-1>',add_tab)
+    #
+    # del_tab_button = GUI.Button(book,text = 'del',bg='maroon',fg='white')
+    # del_tab_button.place(x = 770, y=-0.5)
+    # del_tab_button.bind('<Button-1>', remove_tab)
 
     book.pack(side=GUI.TOP, fill=GUI.BOTH, expand=GUI.YES)
     app.config(menu=menubar)
     app.geometry('800x600')
-    app.title('untitled.cpp')
+    app.title('CodeEditor')
     app.mainloop()
 
 if __name__ == '__main__':

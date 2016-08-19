@@ -7,7 +7,8 @@ import Tkinter as GUI
 import os
 import subprocess
 from functools import reduce
-
+import platform
+from tkFileDialog import asksaveasfilename
 
 class Trie(object):
     def __init__(self):
@@ -650,15 +651,17 @@ class FilesFileMenu(object):
         saves the contents in pad to file
         to specified filename
         """
-        from tkFileDialog import asksaveasfilename
         save_file = asksaveasfilename(parent=app)
         data = pad.get('1.0', GUI.END)[:-1]
         f = open(save_file, 'w')
         f.write(data)
         f.close()
         x = save_file
-        x = x.replace('/', '\\')
-        File.filename(map(str, x.split('\\'))[-1])
+        if platform.system() == 'Windows':
+            x = x.replace('/', '\\')
+            File.filename(map(str, x.split('\\'))[-1])
+        else:
+            pass
         File.filepath(x)
         app.title(File.name)
 
@@ -722,43 +725,83 @@ class RunFilemenu(object):
             global FLAG
             FLAG = 0
 
-            # remove the old exe and replace it with current one
-            try:
-                os.remove('a.exe')
-            except WindowsError:
-                pass
-            # Save_As file automatically before compiling
-            x = cmd_file.Save(app, pad)
+            """
+            Windows system
+            """
 
-            if x == -1:
-                p = subprocess.Popen(
-                    [
-                        "C:\\Program Files (x86)\\MinGW\\bin\\g++.exe",
-                        '-std=c++14',
-                        'untitled.cpp'],
-                    stdin=subprocess.PIPE,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE)
-            else:
-                p = subprocess.Popen(
-                    [
-                        "C:\\Program Files (x86)\\MinGW\\bin\\g++.exe",
-                        '-std=c++14',
-                        File.path],
-                    stdin=subprocess.PIPE,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE)
-            status = p.communicate()[1]
-            outputpad.config(state=GUI.NORMAL)
-            outputpad.delete('1.0', GUI.END)
-            if len(status) == 0:
-                outputpad.insert(GUI.END, 'compiled successfully \n')
-            else:
-                outputpad.insert(GUI.END, status + '\n')
+            if platform.system() == 'Windows':
+                # remove the old exe and replace it with current one
+                os.remove('a.exe')
+                # Save_As file automatically before compiling
+                x = cmd_file.Save(app, pad)
+
+                if x == -1:
+                    p = subprocess.Popen(
+                        [
+                            "C:\\Program Files (x86)\\MinGW\\bin\\g++.exe",
+                            '-std=c++14',
+                            'untitled.cpp'],
+                        stdin=subprocess.PIPE,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE)
+                else:
+                    p = subprocess.Popen(
+                        [
+                            "C:\\Program Files (x86)\\MinGW\\bin\\g++.exe",
+                            '-std=c++14',
+                            File.path],
+                        stdin=subprocess.PIPE,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE)
+                status = p.communicate()[1]
+                outputpad.config(state=GUI.NORMAL)
+                outputpad.delete('1.0', GUI.END)
+                if len(status) == 0:
+                    outputpad.insert(GUI.END, 'compiled successfully \n')
+                else:
+                    outputpad.insert(GUI.END, status + '\n')
+                    p.terminate()
+                    return -1
                 p.terminate()
-                return -1
-            p.terminate()
-            outputpad.config(state=GUI.DISABLED)
+                outputpad.config(state=GUI.DISABLED)
+            """
+            Linux
+            """
+
+            if platform.system() == 'Linux':
+                # No need to terminate process in linux
+                x = cmd_file.Save(app, pad)
+
+                if x == -1:
+                    p = subprocess.Popen(
+                        [
+                            "g++",
+                            '-std=c++11',
+                            'untitled.cpp'],
+                        stdin=subprocess.PIPE,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE)
+                else:
+                    p = subprocess.Popen(
+                        [
+                            "g++",
+                            '-std=c++11',
+                            File.path],
+                        stdin=subprocess.PIPE,
+                        stdout=subprocess.PIPE,
+                        stderr=subprocess.PIPE)
+                status = p.communicate()[1]
+                outputpad.config(state=GUI.NORMAL)
+                outputpad.delete('1.0', GUI.END)
+                if len(status) == 0:
+                    outputpad.insert(GUI.END, 'compiled successfully \n')
+                else:
+                    outputpad.insert(GUI.END, status + '\n')
+                    # p.terminate()
+                    return -1
+                # p.terminate()
+                outputpad.config(state=GUI.DISABLED)
+
         if lang == 'py':
             outputpad.config(state=GUI.NORMAL)
             outputpad.delete('1.0', 'end')
@@ -775,24 +818,50 @@ class RunFilemenu(object):
         Display.show_outputpad(frame2, outputpad)
 
         if lang == 'c++':
-            outputpad.config(state=GUI.NORMAL)
-            outputpad.delete('1.0', GUI.END)
-            if FLAG:
-                # compilation hasnt happened, terminate
-                outputpad.insert(GUI.END, 'Compile First')
-            if not os.path.exists('a.exe'):
+            """
+            Windows
+            """
+            if platform.system() == 'Windows':
+                outputpad.config(state=GUI.NORMAL)
                 outputpad.delete('1.0', GUI.END)
-                outputpad.insert(GUI.END, 'Compilation Failed.. Press Compile to get details')
-                return
-            r = inputpad.get('1.0', GUI.END)
-            f = open('input.txt', 'w')
-            f.write(r)
-            f.close()
-            os.system('a.exe<input.txt >output.txt')
-            r = open('output.txt').read()
-            outputpad.delete('1.0', GUI.END)
-            outputpad.insert(GUI.END, r)
-            outputpad.config(state=GUI.DISABLED)
+                if FLAG:
+                    # compilation hasnt happened, terminate
+                    outputpad.insert(GUI.END, 'Compile First')
+                if not os.path.exists('a.exe'):
+                    outputpad.delete('1.0', GUI.END)
+                    outputpad.insert(GUI.END, 'Compilation Failed.. Press Compile to get details')
+                    return
+                r = inputpad.get('1.0', GUI.END)
+                f = open('input.txt', 'w')
+                f.write(r)
+                f.close()
+                os.system('a.exe<input.txt >output.txt')
+                r = open('output.txt').read()
+                outputpad.delete('1.0', GUI.END)
+                outputpad.insert(GUI.END, r)
+                outputpad.config(state=GUI.DISABLED)
+            """
+            Linux
+            """
+            if platform.system() == 'Linux':
+                outputpad.config(state=GUI.NORMAL)
+                outputpad.delete('1.0', GUI.END)
+                if FLAG:
+                    # compilation hasnt happened, terminate
+                    outputpad.insert(GUI.END, 'Compile First')
+                if not os.path.exists('./a.out'):
+                    outputpad.delete('1.0', GUI.END)
+                    outputpad.insert(GUI.END, 'Compilation Failed.. Press Compile to get details')
+                    return
+                r = inputpad.get('1.0', GUI.END)
+                f = open('input.txt', 'w')
+                f.write(r)
+                f.close()
+                os.system('./a.out <input.txt >output.txt')
+                r = open('output.txt').read()
+                outputpad.delete('1.0', GUI.END)
+                outputpad.insert(GUI.END, r)
+                outputpad.config(state=GUI.DISABLED)
 
         if lang == 'py':
             cmd_file.Save(app, pad)
