@@ -13,6 +13,8 @@ import ttk
 import ScrolledText
 import commands
 import os
+import platform
+
 lang = ''
 
 
@@ -115,14 +117,21 @@ def main():
     cmd_file = commands.FilesFileMenu()
     edit = commands.EditFileMenu()
     run = commands.RunFilemenu()
-    imgdir = '/home/anwesh/PycharmProjects/CodeEditor'
-    print imgdir
-    i1 = GUI.PhotoImage("img_close", file=os.path.join(imgdir, 'close.png'))
-    i2 = GUI.PhotoImage("img_closeactive",
-                            file=os.path.join(imgdir, 'close.png'))
-    i3 = GUI.PhotoImage("img_closepressed",
-                            file=os.path.join(imgdir, 'close.png'))
 
+
+    if platform == 'Windows':
+        imgdir = os.getcwd() + '\images'
+    else:
+        imgdir = os.getcwd() + '/images'
+
+    i1 = GUI.PhotoImage("img_close", file=os.path.join(imgdir, 'close1.png'))
+    i2 = GUI.PhotoImage("img_closeactive",
+                            file=os.path.join(imgdir, 'close_prelight.png'))
+    i3 = GUI.PhotoImage("img_closepressed",
+                            file=os.path.join(imgdir, 'close_pressed.png'))
+    """
+    the close styles
+    """
     style = ttk.Style()
 
     style.element_create("close", "image", "img_close",
@@ -145,6 +154,7 @@ def main():
                                 })]
                  )
     book = ttk.Notebook(app, style="ButtonNotebook")
+
 
     def useless():
         print 'sexy'
@@ -238,34 +248,42 @@ def main():
         code.pad[index()], code.linepad[index()], lang, event))
     app.bind('<BackSpace>', lambda event: display.fast_backspace(
         code.pad[index()], code.linepad[index()], event))
+    app.bind('<Control-t>', lambda event: cmd_file.create_new_tab(code))
+    app.bind('<Control-w>', lambda event: remove_tab())
     """
     The close button tab
     """
 
     def btn_press(event):
-        x, y, widget = event.x, event.y, event.widget
-        elem = widget.identify(x, y)
-        index_tab = widget.index("@%d,%d" % (x, y))
+        try:
+            x, y, widget = event.x, event.y, event.widget
+            elem = widget.identify(x, y)
+            index_tab = widget.index("@%d,%d" % (x, y))
 
-        if "close" in elem:
-            widget.state(['pressed'])
-            widget.pressed_index = index_tab
+            if "close" in elem:
+                widget.state(['pressed'])
+                widget.pressed_index = index_tab
+        except GUI.TclError:
+            pass
 
     def btn_release(event):
-        x, y, widget = event.x, event.y, event.widget
+        try:
+            x, y, widget = event.x, event.y, event.widget
 
-        if not widget.instate(['pressed']):
-            return
+            if not widget.instate(['pressed']):
+                return
 
-        elem = widget.identify(x, y)
-        index = widget.index("@%d,%d" % (x, y))
+            elem = widget.identify(x, y)
+            index = widget.index("@%d,%d" % (x, y))
 
-        if "close" in elem and widget.pressed_index == index:
-            widget.forget(index)
-            widget.event_generate("<<NotebookClosedTab>>")
+            if "close" in elem and widget.pressed_index == index:
+                widget.forget(index)
+                widget.event_generate("<<NotebookClosedTab>>")
 
-        widget.state(["!pressed"])
-        widget.pressed_index = None
+            widget.state(["!pressed"])
+            widget.pressed_index = None
+        except GUI.TclError:
+            pass
 
     app.bind_class("TNotebook", "<ButtonPress-1>", btn_press, True)
     app.bind_class("TNotebook", "<ButtonRelease-1>", btn_release)
